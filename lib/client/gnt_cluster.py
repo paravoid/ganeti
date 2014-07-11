@@ -2229,6 +2229,7 @@ def _UpgradeBeforeConfigurationChange(versionstring):
   (_, tmp_name) = tempfile.mkstemp(prefix=backuptar, dir=pathutils.BACKUP_DIR)
   if not _RunCommandAndReport(["tar", "-cf", tmp_name,
                                "--exclude=queue/archive",
+                               "--exclude=export",
                                pathutils.DATA_DIR]):
     return (False, rollback)
 
