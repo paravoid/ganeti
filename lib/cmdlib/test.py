@@ -155,7 +155,7 @@ class LUTestDelay(NoHooksLU):
       sock.settimeout(self.op.duration)
       start = time.time()
       (conn, _) = sock.accept()
-    except socket.timeout as _:
+    except socket.timeout:
       # If we timed out, all is well
       return False
     finally:
@@ -173,7 +173,7 @@ class LUTestDelay(NoHooksLU):
       # Instance of '_socketobject' has no ... member
       conn.settimeout(time_to_go)
       conn.recv(1)
-    except socket.timeout as _:
+    except socket.timeout:
       # A second timeout can occur if no data is sent
       return False
     finally:

@@ -66,7 +66,7 @@ def _IsCpuMaskWellFormed(cpu_mask):
   """
   try:
     cpu_list = utils.ParseCpuMask(cpu_mask)
-  except errors.ParseError as _:
+  except errors.ParseError:
     return False
   return isinstance(cpu_list, list) and len(cpu_list) > 0
 
@@ -80,7 +80,7 @@ def _IsMultiCpuMaskWellFormed(cpu_mask):
   """
   try:
     utils.ParseMultiCpuMask(cpu_mask)
-  except errors.ParseError as _:
+  except errors.ParseError:
     return False
 
   return True
