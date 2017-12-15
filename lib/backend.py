@@ -314,7 +314,7 @@ def GetMasterNodeName():
   """
   try:
     return _GetConfig().GetMasterNode()
-  except errors.ConfigurationError, err:
+  except errors.ConfigurationError as err:
     _Fail("Cluster configuration incomplete: %s", err, exc=True)
 
 
@@ -740,7 +740,7 @@ def _GetNamedNodeInfo(names, fn):
   if names is None:
     return None
   else:
-    return map(fn, names)
+    return list(map(fn, names))
 
 
 def GetNodeInfo(storage_units, hv_specs):
@@ -761,8 +761,8 @@ def GetNodeInfo(storage_units, hv_specs):
   bootid = utils.ReadFile(_BOOT_ID_PATH, size=128).rstrip("\n")
   storage_info = _GetNamedNodeInfo(
     storage_units,
-    (lambda (storage_type, storage_key, storage_params):
-        _ApplyStorageInfoFunction(storage_type, storage_key, storage_params)))
+    (lambda storage_type_storage_key_storage_params:
+        _ApplyStorageInfoFunction(storage_type_storage_key_storage_params[0], storage_type_storage_key_storage_params[1], storage_type_storage_key_storage_params[2])))
   hv_info = _GetHvInfoAll(hv_specs)
   return (bootid, storage_info, hv_info)
 
@@ -865,7 +865,7 @@ def _VerifyHypervisors(what, vm_capable, result, all_hvparams,
       hvparams = all_hvparams[hv_name]
       try:
         val = get_hv_fn(hv_name).Verify(hvparams=hvparams)
-      except errors.HypervisorError, err:
+      except errors.HypervisorError as err:
         val = "Error while checking hypervisor: %s" % str(err)
       result[constants.NV_HYPERVISOR][hv_name] = val
 
@@ -894,7 +894,7 @@ def _VerifyHvparams(what, vm_capable, result,
       try:
         logging.info("Validating hv %s, %s", hv_name, hvparms)
         get_hv_fn(hv_name).ValidateParameters(hvparms)
-      except errors.HypervisorError, err:
+      except errors.HypervisorError as err:
         result[constants.NV_HVPARAMS].append((source, hv_name, str(err)))
 
 
@@ -917,7 +917,7 @@ def _VerifyInstanceList(what, vm_capable, result, all_hvparams):
     try:
       val = GetInstanceList(what[constants.NV_INSTANCELIST],
                             all_hvparams=all_hvparams)
-    except RPCFail, err:
+    except RPCFail as err:
       val = str(err)
     result[constants.NV_INSTANCELIST] = val
 
@@ -1047,7 +1047,7 @@ def _VerifySshSetup(node_status_list, my_name, ssh_key_type,
       result.append("There is more than one key for node %s in the node public"
                     " key file %s." % (my_name, node_pub_key_path))
   else:
-    if len(pub_keys.keys()) > 0:
+    if len(list(pub_keys.keys())) > 0:
       result.append("The public key file %s is not empty, although"
                     " the node is not a potential master candidate." %
                     node_pub_key_path)
@@ -1102,7 +1102,7 @@ def _VerifySshClutter(node_status_list, my_name):
           " due to an unsuccessful operation which cluttered up the" \
           " 'authorized_keys' file. We recommend to clean this up manually. " \
           % my_name
-    for host, occ in multiple_occurrences.items():
+    for host, occ in list(multiple_occurrences.items()):
       msg += "Entry for '%s' in lines %s. " % (host, utils.CommaJoin(occ))
     result.append(msg)
 
@@ -1218,11 +1218,11 @@ def VerifyNode(what, cluster_name, all_hvparams):
   _VerifyHvparams(what, vm_capable, result)
 
   if constants.NV_FILELIST in what:
-    fingerprints = utils.FingerprintFiles(map(vcluster.LocalizeVirtualPath,
-                                              what[constants.NV_FILELIST]))
+    fingerprints = utils.FingerprintFiles(list(map(vcluster.LocalizeVirtualPath,
+                                              what[constants.NV_FILELIST])))
     result[constants.NV_FILELIST] = \
       dict((vcluster.MakeVirtualPath(key), value)
-           for (key, value) in fingerprints.items())
+           for (key, value) in list(fingerprints.items()))
 
   if constants.NV_CLIENT_CERT in what:
     result[constants.NV_CLIENT_CERT] = _VerifyClientCertificate()
@@ -1281,7 +1281,7 @@ def VerifyNode(what, cluster_name, all_hvparams):
     for path in what[constants.NV_OOB_PATHS]:
       try:
         st = os.stat(path)
-      except OSError, err:
+      except OSError as err:
         tmp.append("error stating out of band helper: %s" % err)
       else:
         if stat.S_ISREG(st.st_mode):
@@ -1294,8 +1294,8 @@ def VerifyNode(what, cluster_name, all_hvparams):
 
   if constants.NV_LVLIST in what and vm_capable:
     try:
-      val = GetVolumeList(utils.ListVolumeGroups().keys())
-    except RPCFail, err:
+      val = GetVolumeList(list(utils.ListVolumeGroups().keys()))
+    except RPCFail as err:
       val = str(err)
     result[constants.NV_LVLIST] = val
 
@@ -1314,7 +1314,7 @@ def VerifyNode(what, cluster_name, all_hvparams):
       for pvi in val:
         # Avoid sending useless data on the wire
         pvi.lv_list = []
-    result[constants.NV_PVLIST] = map(objects.LvmPvInfo.ToDict, val)
+    result[constants.NV_PVLIST] = list(map(objects.LvmPvInfo.ToDict, val))
 
   if constants.NV_VERSION in what:
     result[constants.NV_VERSION] = (constants.PROTOCOL_VERSION,
@@ -1325,7 +1325,7 @@ def VerifyNode(what, cluster_name, all_hvparams):
   if constants.NV_DRBDVERSION in what and vm_capable:
     try:
       drbd_version = DRBD8.GetProcInfo().GetVersionString()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       logging.warning("Can't get DRBD version", exc_info=True)
       drbd_version = str(err)
     result[constants.NV_DRBDVERSION] = drbd_version
@@ -1333,7 +1333,7 @@ def VerifyNode(what, cluster_name, all_hvparams):
   if constants.NV_DRBDLIST in what and vm_capable:
     try:
       used_minors = drbd.DRBD8.GetUsedDevs()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       logging.warning("Can't get used minors list", exc_info=True)
       used_minors = str(err)
     result[constants.NV_DRBDLIST] = used_minors
@@ -1342,7 +1342,7 @@ def VerifyNode(what, cluster_name, all_hvparams):
     status = True
     try:
       payload = drbd.DRBD8.GetUsermodeHelper()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       logging.error("Can't get DRBD usermode helper: %s", str(err))
       status = False
       payload = str(err)
@@ -1856,7 +1856,7 @@ def RemoveNodeSshKeyBulk(node_list,
             node_info.uuid for node_info in node_list
             if node_info.from_authorized_keys]
         keys_to_remove_from_authorized_keys = dict([
-            (uuid, keys) for (uuid, keys) in all_keys_to_remove.items()
+            (uuid, keys) for (uuid, keys) in list(all_keys_to_remove.items())
             if uuid in nodes_remove_from_authorized_keys])
         base_data[constants.SSHS_SSH_AUTHORIZED_KEYS] = \
           (constants.SSHS_REMOVE, keys_to_remove_from_authorized_keys)
@@ -1875,7 +1875,7 @@ def RemoveNodeSshKeyBulk(node_list,
             node_info.uuid for node_info in node_list
             if node_info.from_public_keys]
         keys_to_remove_from_public_keys = dict([
-            (uuid, keys) for (uuid, keys) in all_keys_to_remove.items()
+            (uuid, keys) for (uuid, keys) in list(all_keys_to_remove.items())
             if uuid in nodes_remove_from_public_keys])
         pot_mc_data[constants.SSHS_SSH_PUBLIC_KEYS] = \
           (constants.SSHS_REMOVE, keys_to_remove_from_public_keys)
@@ -2049,7 +2049,7 @@ def _GetOldMasterKeys(master_node_uuid, pub_key_file):
 
 def _GetNewMasterKey(root_keyfiles, master_node_uuid):
   new_master_keys = []
-  for (_, (_, public_key_file)) in root_keyfiles.items():
+  for (_, (_, public_key_file)) in list(root_keyfiles.items()):
     public_key_dir = os.path.dirname(public_key_file)
     public_key_file_tmp_filename = \
         os.path.splitext(os.path.basename(public_key_file))[0] \
@@ -2067,7 +2067,7 @@ def _GetNewMasterKey(root_keyfiles, master_node_uuid):
 
 def _ReplaceMasterKeyOnMaster(root_keyfiles):
   number_of_moves = 0
-  for (_, (private_key_file, public_key_file)) in root_keyfiles.items():
+  for (_, (private_key_file, public_key_file)) in list(root_keyfiles.items()):
     key_dir = os.path.dirname(public_key_file)
     private_key_file_tmp = \
       os.path.basename(private_key_file) + constants.SSHS_MASTER_SUFFIX
@@ -2142,7 +2142,7 @@ def RenewSshKeys(node_uuids, node_names, master_candidate_uuids,
   (_, new_pub_keyfile) = root_keyfiles[new_key_type]
   old_master_key = utils.ReadFile(old_pub_keyfile)
 
-  node_uuid_name_map = zip(node_uuids, node_names)
+  node_uuid_name_map = list(zip(node_uuids, node_names))
 
   master_node_name = ssconf_store.GetMasterNode()
   master_node_uuid = _GetMasterNodeUUID(node_uuid_name_map, master_node_name)
@@ -2332,7 +2332,7 @@ def GetBlockDevSizes(devices):
 
     try:
       st = os.stat(devpath)
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       logging.warning("Error stat()'ing device %s: %s", devpath, str(err))
       continue
 
@@ -2487,7 +2487,7 @@ def GetInstanceListForHypervisor(hname, hvparams=None,
   """
   try:
     return get_hv_fn(hname).ListInstances(hvparams=hvparams)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Error enumerating instances (hypervisor %s): %s",
           hname, err, exc=True)
 
@@ -2797,7 +2797,7 @@ def _SymlinkBlockDev(instance_name, device_path, idx):
   link_name = _GetBlockDevSymlinkPath(instance_name, idx)
   try:
     os.symlink(device_path, link_name)
-  except OSError, err:
+  except OSError as err:
     if err.errno == errno.EEXIST:
       if (not os.path.islink(link_name) or
           os.readlink(link_name) != device_path):
@@ -2865,7 +2865,7 @@ def _GatherAndLinkBlockDevs(instance):
     device.Open()
     try:
       link_name = _SymlinkBlockDev(instance.name, device.dev_path, idx)
-    except OSError, e:
+    except OSError as e:
       raise errors.BlockDeviceError("Cannot create block device symlink: %s" %
                                     e.strerror)
     uri = _CalculateDeviceURI(instance, disk, device)
@@ -2919,9 +2919,9 @@ def StartInstance(instance, startup_paused, reason, store_reason=True):
     hyper.StartInstance(instance, block_devices, startup_paused)
     if store_reason:
       _StoreInstReasonTrail(instance.name, reason)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Block device error: %s", err, exc=True)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _RemoveBlockDevLinks(instance.name, instance.disks_info)
     _Fail("Hypervisor error: %s", err, exc=True)
 
@@ -2956,7 +2956,7 @@ def InstanceShutdown(instance, timeout, reason, store_reason=True):
           hyper.StopInstance(instance, retry=self.tried_once, timeout=timeout)
           if store_reason:
             _StoreInstReasonTrail(instance.name, reason)
-        except errors.HypervisorError, err:
+        except errors.HypervisorError as err:
           # if the instance does no longer exist, consider this success and go
           # to cleanup, otherwise fail without retrying
           if _GetInstanceInfo(instance):
@@ -2978,7 +2978,7 @@ def InstanceShutdown(instance, timeout, reason, store_reason=True):
 
       try:
         hyper.StopInstance(instance, force=True)
-      except errors.HypervisorError, err:
+      except errors.HypervisorError as err:
         # only raise an error if the instance still exists, otherwise
         # the error could simply be "instance ... unknown"!
         if _GetInstanceInfo(instance):
@@ -2991,7 +2991,7 @@ def InstanceShutdown(instance, timeout, reason, store_reason=True):
 
   try:
     hyper.CleanupInstance(instance.name)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     logging.warning("Failed to execute post-shutdown cleanup step: %s", err)
 
   _RemoveBlockDevLinks(instance.name, instance.disks_info)
@@ -3030,14 +3030,14 @@ def InstanceReboot(instance, reboot_type, shutdown_timeout, reason):
   if reboot_type == constants.INSTANCE_REBOOT_SOFT:
     try:
       hyper.RebootInstance(instance)
-    except errors.HypervisorError, err:
+    except errors.HypervisorError as err:
       _Fail("Failed to soft reboot instance '%s': %s", instance.name, err)
   elif reboot_type == constants.INSTANCE_REBOOT_HARD:
     try:
       InstanceShutdown(instance, shutdown_timeout, reason, store_reason=False)
       StartInstance(instance, False, reason, store_reason=False)
       _StoreInstReasonTrail(instance.name, reason)
-    except errors.HypervisorError, err:
+    except errors.HypervisorError as err:
       _Fail("Failed to hard reboot instance '%s': %s", instance.name, err)
   else:
     _Fail("Invalid reboot_type received: '%s'", reboot_type)
@@ -3060,7 +3060,7 @@ def InstanceBalloonMemory(instance, memory):
     return
   try:
     hyper.BalloonInstanceMemory(instance, memory)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Failed to balloon instance memory: %s", err, exc=True)
 
 
@@ -3074,7 +3074,7 @@ def MigrationInfo(instance):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     info = hyper.MigrationInfo(instance)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Failed to fetch migration information: %s", err, exc=True)
   return info
 
@@ -3093,7 +3093,7 @@ def AcceptInstance(instance, info, target):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     hyper.AcceptInstance(instance, info, target)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Failed to accept instance: %s", err, exc=True)
 
 
@@ -3111,7 +3111,7 @@ def FinalizeMigrationDst(instance, info, success):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     hyper.FinalizeMigrationDst(instance, info, success)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Failed to finalize migration on the target node: %s", err, exc=True)
 
 
@@ -3134,7 +3134,7 @@ def MigrateInstance(cluster_name, instance, target, live):
 
   try:
     hyper.MigrateInstance(cluster_name, instance, target, live)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail("Failed to migrate instance: %s", err, exc=True)
 
 
@@ -3154,7 +3154,7 @@ def FinalizeMigrationSource(instance, success, live):
 
   try:
     hyper.FinalizeMigrationSource(instance, success, live)
-  except Exception, err:  # pylint: disable=W0703
+  except Exception as err:  # pylint: disable=W0703
     _Fail("Failed to finalize the migration on the source node: %s", err,
           exc=True)
 
@@ -3174,7 +3174,7 @@ def GetMigrationStatus(instance):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     return hyper.GetMigrationStatus(instance)
-  except Exception, err:  # pylint: disable=W0703
+  except Exception as err:  # pylint: disable=W0703
     _Fail("Failed to get migration status: %s", err, exc=True)
 
 
@@ -3200,7 +3200,7 @@ def HotplugDevice(instance, action, dev_type, device, extra, seq):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     hyper.VerifyHotplugSupport(instance, action, dev_type)
-  except errors.HotplugError, err:
+  except errors.HotplugError as err:
     _Fail("Hotplug is not supported: %s", err)
 
   if action == constants.HOTPLUG_ACTION_ADD:
@@ -3222,7 +3222,7 @@ def HotplugSupported(instance):
   hyper = hypervisor.GetHypervisor(instance.hypervisor)
   try:
     hyper.HotplugSupported(instance)
-  except errors.HotplugError, err:
+  except errors.HotplugError as err:
     _Fail("Hotplug is not supported: %s", err)
 
 
@@ -3282,7 +3282,7 @@ def BlockdevCreate(disk, size, owner, on_primary, info, excl_stor):
     for child in disk.children:
       try:
         crdev = _RecursiveAssembleBD(child, owner, on_primary)
-      except errors.BlockDeviceError, err:
+      except errors.BlockDeviceError as err:
         _Fail("Can't assemble device %s: %s", child, err)
       if on_primary or disk.AssembleOnSecondary():
         # we need the children open in case the device itself has to
@@ -3290,24 +3290,24 @@ def BlockdevCreate(disk, size, owner, on_primary, info, excl_stor):
         try:
           # pylint: disable=E1103
           crdev.Open()
-        except errors.BlockDeviceError, err:
+        except errors.BlockDeviceError as err:
           _Fail("Can't make child '%s' read-write: %s", child, err)
       clist.append(crdev)
 
   try:
     device = bdev.Create(disk, clist, excl_stor)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Can't create block device: %s", err)
 
   if on_primary or disk.AssembleOnSecondary():
     try:
       device.Assemble()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       _Fail("Can't assemble device after creation, unusual event: %s", err)
     if on_primary or disk.OpenOnSecondary():
       try:
         device.Open(force=True)
-      except errors.BlockDeviceError, err:
+      except errors.BlockDeviceError as err:
         _Fail("Can't make device r/w after creation, unusual event: %s", err)
     DevCacheManager.UpdateCache(device.dev_path, owner,
                                 on_primary, disk.iv_name)
@@ -3566,7 +3566,7 @@ def BlockdevRemove(disk):
   msgs = []
   try:
     rdev = _RecursiveFindBD(disk)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     # probably can't attach
     logging.info("Can't attach to device %s in remove", disk)
     rdev = None
@@ -3577,7 +3577,7 @@ def BlockdevRemove(disk):
       try:
         rdev.Remove()
         return []
-      except errors.BlockDeviceError, err:
+      except errors.BlockDeviceError as err:
         return [str(err)]
 
     msgs.extend(utils.SimpleRetry([], _TryRemove,
@@ -3591,7 +3591,7 @@ def BlockdevRemove(disk):
     for child in disk.children:
       try:
         BlockdevRemove(child)
-      except RPCFail, err:
+      except RPCFail as err:
         msgs.append(str(err))
 
   if msgs:
@@ -3630,7 +3630,7 @@ def _RecursiveAssembleBD(disk, owner, as_primary):
     for chld_disk in disk.children:
       try:
         cdev = _RecursiveAssembleBD(chld_disk, owner, as_primary)
-      except errors.BlockDeviceError, err:
+      except errors.BlockDeviceError as err:
         if children.count(None) >= mcn:
           raise
         cdev = None
@@ -3675,9 +3675,9 @@ def BlockdevAssemble(disk, instance, as_primary, idx):
       return result, result
     else:
       _Fail("Unexpected result from _RecursiveAssembleBD")
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Error while assembling disk: %s", err, exc=True)
-  except OSError, err:
+  except OSError as err:
     _Fail("Error while symlinking disk: %s", err, exc=True)
 
   return dev_path, link_name, uri
@@ -3707,14 +3707,14 @@ def BlockdevShutdown(disk):
     try:
       r_dev.Shutdown()
       DevCacheManager.RemoveCache(r_path)
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       msgs.append(str(err))
 
   if disk.children:
     for child in disk.children:
       try:
         BlockdevShutdown(child)
-      except RPCFail, err:
+      except RPCFail as err:
         msgs.append(str(err))
 
   if msgs:
@@ -3815,7 +3815,7 @@ def BlockdevGetmirrorstatusMulti(disks):
         continue
 
       status = rbd.CombinedSyncStatus()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       logging.exception("Error while getting disk status")
       result.append((False, str(err)))
     else:
@@ -3892,7 +3892,7 @@ def BlockdevFind(disk):
   """
   try:
     rbd = _RecursiveFindBD(disk)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Failed to find device: %s", err, exc=True)
 
   if rbd is None:
@@ -3962,7 +3962,7 @@ def UploadFile(file_name, data, mode, uid, gid, atime, mtime):
 
   raw_data = _Decompress(data)
 
-  if not (isinstance(uid, basestring) and isinstance(gid, basestring)):
+  if not (isinstance(uid, str) and isinstance(gid, str)):
     _Fail("Invalid username/groupname type")
 
   getents = runtime.GetEnts()
@@ -4012,7 +4012,7 @@ def _OSOndiskAPIVersion(os_dir):
 
   try:
     st = os.stat(api_file)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     return False, ("Required file '%s' not found under path %s: %s" %
                    (constants.OS_API_FILE, os_dir, utils.ErrnoOrStr(err)))
 
@@ -4022,13 +4022,13 @@ def _OSOndiskAPIVersion(os_dir):
 
   try:
     api_versions = utils.ReadFile(api_file).splitlines()
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     return False, ("Error while reading the API version file at %s: %s" %
                    (api_file, utils.ErrnoOrStr(err)))
 
   try:
     api_versions = [int(version.strip()) for version in api_versions]
-  except (TypeError, ValueError), err:
+  except (TypeError, ValueError) as err:
     return False, ("API version(s) can't be converted to integer: %s" %
                    str(err))
 
@@ -4063,7 +4063,7 @@ def DiagnoseOS(top_dirs=None):
     if os.path.isdir(dir_name):
       try:
         f_names = utils.ListVisibleFiles(dir_name)
-      except EnvironmentError, err:
+      except EnvironmentError as err:
         logging.exception("Can't list the OS directory %s: %s", dir_name, err)
         break
       for name in f_names:
@@ -4132,12 +4132,12 @@ def _TryOSFromDisk(name, base_dir=None):
   else:
     del os_files[constants.OS_SCRIPT_VERIFY]
 
-  for (filename, required) in os_files.items():
+  for (filename, required) in list(os_files.items()):
     os_files[filename] = utils.PathJoin(os_dir, filename)
 
     try:
       st = os.stat(os_files[filename])
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       if err.errno == errno.ENOENT and not required:
         del os_files[filename]
         continue
@@ -4168,7 +4168,7 @@ def _TryOSFromDisk(name, base_dir=None):
     try:
       variants = \
         utils.FilterEmptyLinesAndComments(utils.ReadFile(variants_file))
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       # we accept missing files, but not other errors
       if err.errno != errno.ENOENT:
         return False, ("Error while reading the OS variants file at %s: %s" %
@@ -4179,7 +4179,7 @@ def _TryOSFromDisk(name, base_dir=None):
     parameters_file = os_files[constants.OS_PARAMETERS_FILE]
     try:
       parameters = utils.ReadFile(parameters_file).splitlines()
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       return False, ("Error while reading the OS parameters file at %s: %s" %
                      (parameters_file, utils.ErrnoOrStr(err)))
     parameters = [v.split(None, 1) for v in parameters]
@@ -4259,7 +4259,7 @@ def OSCoreEnv(os_name, inst_os, os_params, debug=0):
   result["OS_VARIANT"] = variant
 
   # OS params
-  for pname, pvalue in os_params.items():
+  for pname, pvalue in list(os_params.items()):
     result["OSP_%s" % pname.upper().replace("-", "_")] = pvalue
 
   # Set a default path otherwise programs called by OS scripts (or
@@ -4340,7 +4340,7 @@ def OSEnvironment(instance, inst_os, debug=0):
 
   # HV/BE params
   for source, kind in [(instance.beparams, "BE"), (instance.hvparams, "HV")]:
-    for key, value in source.items():
+    for key, value in list(source.items()):
       result["INSTANCE_%s_%s" % (kind, key)] = str(value)
 
   return result
@@ -4373,7 +4373,7 @@ def DiagnoseExtStorage(top_dirs=None):
     if os.path.isdir(dir_name):
       try:
         f_names = utils.ListVisibleFiles(dir_name)
-      except EnvironmentError, err:
+      except EnvironmentError as err:
         logging.exception("Can't list the ExtStorage directory %s: %s",
                           dir_name, err)
         break
@@ -4420,7 +4420,7 @@ def BlockdevGrow(disk, amount, dryrun, backingstore, excl_stor):
 
   try:
     r_dev.Grow(amount, dryrun, backingstore, excl_stor)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Failed to grow block device: %s", err, exc=True)
 
 
@@ -4482,7 +4482,7 @@ def BlockdevSetInfo(disk, info):
 
   try:
     r_dev.SetInfo(info)
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail("Failed to set information on block device: %s", err, exc=True)
 
 
@@ -4561,20 +4561,20 @@ def FinalizeExport(instance, snap_disks):
   # New-style hypervisor/backend parameters
 
   config.add_section(constants.INISECT_HYP)
-  for name, value in instance.hvparams.items():
+  for name, value in list(instance.hvparams.items()):
     if name not in constants.HVC_GLOBALS:
       config.set(constants.INISECT_HYP, name, str(value))
 
   config.add_section(constants.INISECT_BEP)
-  for name, value in instance.beparams.items():
+  for name, value in list(instance.beparams.items()):
     config.set(constants.INISECT_BEP, name, str(value))
 
   config.add_section(constants.INISECT_OSP)
-  for name, value in instance.osparams.items():
+  for name, value in list(instance.osparams.items()):
     config.set(constants.INISECT_OSP, name, str(value))
 
   config.add_section(constants.INISECT_OSP_PRIVATE)
-  for name, value in instance.osparams_private.items():
+  for name, value in list(instance.osparams_private.items()):
     config.set(constants.INISECT_OSP_PRIVATE, name, str(value.Get()))
 
   utils.WriteFile(utils.PathJoin(destdir, constants.EXPORT_CONF_FILE),
@@ -4631,7 +4631,7 @@ def RemoveExport(export):
 
   try:
     shutil.rmtree(target)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     _Fail("Error while removing the export: %s", err, exc=True)
 
 
@@ -4665,7 +4665,7 @@ def BlockdevRename(devlist):
         # but we don't have the owner here - maybe parse from existing
         # cache? for now, we only lose lvm data when we rename, which
         # is less critical than DRBD or MD
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       msgs.append("Can't rename device '%s' to '%s': %s" %
                   (dev, unique_id, err))
       logging.exception("Can't rename device '%s' to '%s'", dev, unique_id)
@@ -4710,8 +4710,8 @@ def CreateFileStorageDir(file_storage_dir):
             file_storage_dir)
   else:
     try:
-      os.makedirs(file_storage_dir, 0750)
-    except OSError, err:
+      os.makedirs(file_storage_dir, 0o750)
+    except OSError as err:
       _Fail("Cannot create file storage directory '%s': %s",
             file_storage_dir, err, exc=True)
 
@@ -4736,7 +4736,7 @@ def RemoveFileStorageDir(file_storage_dir):
     # deletes dir only if empty, otherwise we want to fail the rpc call
     try:
       os.rmdir(file_storage_dir)
-    except OSError, err:
+    except OSError as err:
       _Fail("Cannot remove file storage directory '%s': %s",
             file_storage_dir, err)
 
@@ -4759,7 +4759,7 @@ def RenameFileStorageDir(old_file_storage_dir, new_file_storage_dir):
     if os.path.isdir(old_file_storage_dir):
       try:
         os.rename(old_file_storage_dir, new_file_storage_dir)
-      except OSError, err:
+      except OSError as err:
         _Fail("Cannot rename '%s' to '%s': %s",
               old_file_storage_dir, new_file_storage_dir, err)
     else:
@@ -4830,7 +4830,7 @@ def JobQueueRename(old, new):
 
   getents = runtime.GetEnts()
 
-  utils.RenameFile(old, new, mkdir=True, mkdir_mode=0750,
+  utils.RenameFile(old, new, mkdir=True, mkdir_mode=0o750,
                    dir_uid=getents.masterd_uid, dir_gid=getents.daemons_gid)
 
 
@@ -4862,7 +4862,7 @@ def BlockdevClose(instance_name, disks):
   for rd in bdevs:
     try:
       rd.Close()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       msg.append(str(err))
   if msg:
     _Fail("Can't close devices: %s", ",".join(msg))
@@ -4887,7 +4887,7 @@ def BlockdevOpen(instance_name, disks, exclusive):
     try:
       rd.Open(exclusive=exclusive)
       _SymlinkBlockDev(instance_name, rd.dev_path, idx)
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       msg.append(str(err))
 
   if msg:
@@ -4907,7 +4907,7 @@ def ValidateHVParams(hvname, hvparams):
   try:
     hv_type = hypervisor.GetHypervisor(hvname)
     hv_type.ValidateParameters(hvparams)
-  except errors.HypervisorError, err:
+  except errors.HypervisorError as err:
     _Fail(str(err), log=False)
 
 
@@ -4995,7 +4995,7 @@ def ValidateOS(required, osname, checks, osparams, force_variant):
     return True
 
   if constants.OS_VALIDATE_PARAMETERS in checks:
-    _CheckOSPList(tbv, osparams.keys())
+    _CheckOSPList(tbv, list(osparams.keys()))
 
   validate_env = OSCoreEnv(osname, tbv, osparams)
   result = utils.RunCmd([tbv.verify_script] + checks, env=validate_env,
@@ -5080,7 +5080,7 @@ def DemoteFromMC():
   try:
     if os.path.isfile(pathutils.CLUSTER_CONF_FILE):
       utils.CreateBackup(pathutils.CLUSTER_CONF_FILE)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     if err.errno != errno.ENOENT:
       _Fail("Error while backing up cluster file: %s", err, exc=True)
 
@@ -5119,8 +5119,8 @@ def CreateX509Certificate(validity, cryptodir=pathutils.CRYPTO_KEYS_DIR):
 
     (_, key_file, cert_file) = _GetX509Filenames(cryptodir, name)
 
-    utils.WriteFile(key_file, mode=0400, data=key_pem)
-    utils.WriteFile(cert_file, mode=0400, data=cert_pem)
+    utils.WriteFile(key_file, mode=0o400, data=key_pem)
+    utils.WriteFile(cert_file, mode=0o400, data=cert_pem)
 
     # Never return private key as it shouldn't leave the node
     return (name, cert_pem)
@@ -5143,7 +5143,7 @@ def RemoveX509Certificate(name, cryptodir=pathutils.CRYPTO_KEYS_DIR):
 
   try:
     os.rmdir(cert_dir)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     _Fail("Cannot remove certificate directory '%s': %s",
           cert_dir, err)
 
@@ -5179,7 +5179,7 @@ def _GetImportExportIoCommand(instance, mode, ieio, ieargs):
             filename, pathutils.EXPORT_DIR, real_filename)
 
     # Create directory
-    utils.Makedirs(directory, mode=0750)
+    utils.Makedirs(directory, mode=0o750)
 
     quoted_filename = utils.ShellQuote(filename)
 
@@ -5191,7 +5191,7 @@ def _GetImportExportIoCommand(instance, mode, ieio, ieargs):
       # Retrieve file size
       try:
         st = os.stat(filename)
-      except EnvironmentError, err:
+      except EnvironmentError as err:
         logging.error("Can't stat(2) %s: %s", filename, err)
       else:
         exp_size = utils.BytesToMebibyte(st.st_size)
@@ -5210,7 +5210,7 @@ def _GetImportExportIoCommand(instance, mode, ieio, ieargs):
   elif ieio == constants.IEIO_SCRIPT:
     (disk, disk_index, ) = ieargs
 
-    assert isinstance(disk_index, (int, long))
+    assert isinstance(disk_index, int)
 
     inst_os = OSFromDisk(instance.os)
     env = OSEnvironment(instance, inst_os)
@@ -5341,7 +5341,7 @@ def StartImportExportDaemon(mode, opts, host, port, instance, component,
       ca = opts.ca_pem
 
     # Write CA file
-    utils.WriteFile(ca_file, data=ca, mode=0400)
+    utils.WriteFile(ca_file, data=ca, mode=0o400)
 
     cmd = [
       pathutils.IMPORT_EXPORT_DAEMON,
@@ -5419,7 +5419,7 @@ def GetImportExportStatus(names):
 
     try:
       data = utils.ReadFile(status_file)
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       if err.errno != errno.ENOENT:
         raise
       data = None
@@ -5499,7 +5499,7 @@ def DrbdDisconnectNet(disks):
   for rd in bdevs:
     try:
       rd.DisconnectNet()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       _Fail("Can't change network configuration to standalone mode: %s",
             err, exc=True)
 
@@ -5515,7 +5515,7 @@ def DrbdAttachNet(disks, multimaster):
   for rd in bdevs:
     try:
       rd.AttachNet(multimaster)
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       _Fail("Can't change network configuration: %s", err)
 
   # wait until the disks are connected; we need to retry the re-attach
@@ -5551,7 +5551,7 @@ def DrbdAttachNet(disks, multimaster):
         # new staged way of changing disk configs
         try:
           rd.AttachNet(multimaster)
-        except errors.BlockDeviceError, err:
+        except errors.BlockDeviceError as err:
           _Fail("Can't change network configuration: %s", err)
 
     if not all_connected:
@@ -5619,7 +5619,7 @@ def GetDrbdUsermodeHelper():
   """
   try:
     return drbd.DRBD8.GetUsermodeHelper()
-  except errors.BlockDeviceError, err:
+  except errors.BlockDeviceError as err:
     _Fail(str(err))
 
 
@@ -5686,7 +5686,7 @@ def _CommonRestrictedCmdCheck(path, owner):
 
   try:
     st = os.stat(path)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     return (False, "Can't stat(2) '%s': %s" % (path, err))
 
   if stat.S_IMODE(st.st_mode) & (~_RCMD_MAX_MODE):
@@ -5847,7 +5847,7 @@ def SetWatcherPause(until, _filename=pathutils.WATCHER_PAUSEFILE):
     if not ht.TNumber(until):
       _Fail("Duration must be numeric")
 
-    utils.WriteFile(_filename, data="%d\n" % (until, ), mode=0644)
+    utils.WriteFile(_filename, data="%d\n" % (until, ), mode=0o644)
 
 
 def ConfigureOVS(ovs_name, ovs_link):
@@ -6095,7 +6095,7 @@ class DevCacheManager(object):
     fdata = "%s %s %s\n" % (str(owner), state, iv_name)
     try:
       utils.WriteFile(fpath, data=fdata)
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       logging.exception("Can't update bdev cache for %s: %s", dev_path, err)
 
   @classmethod
@@ -6117,5 +6117,5 @@ class DevCacheManager(object):
     fpath = cls._ConvertPath(dev_path)
     try:
       utils.RemoveFile(fpath)
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       logging.exception("Can't update bdev cache for %s: %s", dev_path, err)

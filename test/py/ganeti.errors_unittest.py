@@ -36,7 +36,7 @@ import unittest
 
 from ganeti import errors
 
-import testutils
+from . import testutils
 
 
 class TestErrors(testutils.GanetiTestCase):
@@ -51,8 +51,8 @@ class TestErrors(testutils.GanetiTestCase):
       "ProgrammerError": errors.ProgrammerError,
       }
 
-    for name, cls in tdata.items():
-      self.assert_(errors.GetErrorClass(name) is cls)
+    for name, cls in list(tdata.items()):
+      self.assertTrue(errors.GetErrorClass(name) is cls)
 
   def testEncodeException(self):
     self.assertEqualValues(errors.EncodeException(Exception("Foobar")),
@@ -76,7 +76,7 @@ class TestErrors(testutils.GanetiTestCase):
       src = errors.GenericError(i)
       try:
         errors.MaybeRaise(errors.EncodeException(src))
-      except errors.GenericError, dst:
+      except errors.GenericError as dst:
         self.assertEqual(src.args, dst.args)
         self.assertEqual(src.__class__, dst.__class__)
       else:

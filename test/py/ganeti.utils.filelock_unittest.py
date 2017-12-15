@@ -38,7 +38,7 @@ from ganeti import constants
 from ganeti import utils
 from ganeti import errors
 
-import testutils
+from . import testutils
 
 
 class _BaseFileLockTest:
@@ -100,7 +100,7 @@ class _BaseFileLockTest:
       # The timeout doesn't really matter as the parent process waits for us to
       # finish anyway.
       fn(blocking=blocking, timeout=0.01)
-    except errors.LockError, err:
+    except errors.LockError as err:
       return False
 
     return True
@@ -112,12 +112,12 @@ class _BaseFileLockTest:
   def testTimeout(self):
     for blocking in [True, False]:
       self.lock.Exclusive(blocking=True)
-      self.failIf(self._TryLock(False, blocking))
-      self.failIf(self._TryLock(True, blocking))
+      self.assertFalse(self._TryLock(False, blocking))
+      self.assertFalse(self._TryLock(True, blocking))
 
       self.lock.Shared(blocking=True)
-      self.assert_(self._TryLock(True, blocking))
-      self.failIf(self._TryLock(False, blocking))
+      self.assertTrue(self._TryLock(True, blocking))
+      self.assertFalse(self._TryLock(False, blocking))
 
   def testCloseShared(self):
     self.lock.Close()

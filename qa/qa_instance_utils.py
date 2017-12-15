@@ -35,14 +35,13 @@
 from ganeti import utils
 from ganeti import constants
 from ganeti import pathutils
-
 from ganeti.utils import retry
 
-import qa_config
-import qa_error
-import qa_utils
+from . import qa_config
+from . import qa_error
+from . import qa_utils
 
-from qa_utils import AssertIn, AssertCommand
+from .qa_utils import AssertIn, AssertCommand
 
 
 def RemoveInstance(instance):

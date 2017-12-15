@@ -43,7 +43,7 @@ from ganeti import compat
 from qa import qa_config
 from qa import qa_error
 
-import testutils
+from . import testutils
 
 
 class TestTestEnabled(unittest.TestCase):
@@ -177,7 +177,7 @@ class TestQaConfigLoad(unittest.TestCase):
 
     try:
       qa_config._QaConfig.Load(filename)
-    except qa_error.Error, err:
+    except qa_error.Error as err:
       self.assertTrue(str(err).startswith(expected))
     else:
       self.fail("Exception was not raised")
@@ -412,7 +412,7 @@ class TestQaConfig(unittest.TestCase):
         acquired.append((node.use_count, node.primary, node))
 
       # Check if returned nodes were in correct order
-      key_fn = lambda (a, b, c): (a, utils.NiceSortKey(b), c)
+      key_fn = lambda a_b_c: (a_b_c[0], utils.NiceSortKey(a_b_c[1]), a_b_c[2])
       self.assertEqual(acquired, sorted(acquired, key=key_fn))
 
       # Release previously acquired nodes
@@ -467,7 +467,7 @@ class TestRepresentation(unittest.TestCase):
       self._Check(node, "use_count=%s" % i)
 
     # Release node
-    for i in reversed(range(1, 5)):
+    for i in reversed(list(range(1, 5))):
       node.Release()
       self._Check(node, "use_count=%s" % (i - 1))
 

@@ -52,14 +52,14 @@ def _ReadNumericFile(file_name):
   """
   try:
     contents = utils.ReadFile(file_name)
-  except EnvironmentError, err:
+  except EnvironmentError as err:
     if err.errno in (errno.ENOENT, ):
       return None
     raise
 
   try:
     return int(contents)
-  except (ValueError, TypeError), err:
+  except (ValueError, TypeError) as err:
     # Couldn't convert to int
     raise errors.JobQueueError("Content of file '%s' is not numeric: %s" %
                                (file_name, err))
@@ -205,7 +205,7 @@ def FormatJobID(job_id):
   @return: the formatted job id
 
   """
-  if not isinstance(job_id, (int, long)):
+  if not isinstance(job_id, int):
     raise errors.ProgrammerError("Job ID '%s' not numeric" % job_id)
   if job_id < 0:
     raise errors.ProgrammerError("Job ID %s is negative" % job_id)

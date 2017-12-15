@@ -57,7 +57,7 @@ from ganeti.cmdlib import instance_utils
 
 from cmdlib.cmdlib_unittest import _FakeLU
 
-from testsupport import *
+from .testsupport import *
 
 import testutils
 from testutils.config_mock import _UpdateIvNames
@@ -542,7 +542,7 @@ class TestLUInstanceCreate(CmdlibTestCase):
                          identify_defaults=True)
     self.ExecOpCode(op)
 
-    inst = self.cfg.GetAllInstancesInfo().values()[0]
+    inst = list(self.cfg.GetAllInstancesInfo().values())[0]
     self.assertEqual(0, len(inst.hvparams))
     self.assertEqual(0, len(inst.beparams))
     assert self.os_name_variant not in inst.osparams or \
@@ -819,7 +819,7 @@ class TestDiskTemplateDiskTypeBijection(TestLUInstanceCreate):
     instances = self.cfg.GetInstancesInfoByFilter(lambda _: True)
     self.assertEqual(len(instances), 1,
       "Expected 1 instance, got\n%s" % instances)
-    return instances.values()[0]
+    return list(instances.values())[0]
 
   def testDiskTemplateLogicalIdBijectionDiskless(self):
     op = self.CopyOpCode(self.diskless_op)
@@ -1260,17 +1260,17 @@ class _FakeConfigForGenDiskTemplate(ConfigMock):
     self._secret = itertools.count()
 
   def GenerateUniqueID(self, ec_id):
-    return "ec%s-uq%s" % (ec_id, self._unique_id.next())
+    return "ec%s-uq%s" % (ec_id, next(self._unique_id))
 
   def AllocateDRBDMinor(self, nodes, disk):
-    return [self._drbd_minor.next()
+    return [next(self._drbd_minor)
             for _ in nodes]
 
   def AllocatePort(self):
-    return self._port.next()
+    return next(self._port)
 
   def GenerateDRBDSecret(self, ec_id):
-    return "ec%s-secret%s" % (ec_id, self._secret.next())
+    return "ec%s-secret%s" % (ec_id, next(self._secret))
 
 
 class TestGenerateDiskTemplate(CmdlibTestCase):
@@ -1537,7 +1537,8 @@ class _DiskPauseTracker:
   def __init__(self):
     self.history = []
 
-  def __call__(self, (disks, instance), pause):
+  def __call__(self, xxx_todo_changeme, pause):
+    (disks, instance) = xxx_todo_changeme
     disk_uuids = [d.uuid for d in disks]
     assert not (set(disk_uuids) - set(instance.disks))
 
@@ -1580,9 +1581,10 @@ class _DiskWipeProgressTracker:
     self._start_offset = start_offset
     self.progress = {}
 
-  def __call__(self, (disk, _), offset, size):
-    assert isinstance(offset, (long, int))
-    assert isinstance(size, (long, int))
+  def __call__(self, xxx_todo_changeme1, offset, size):
+    (disk, _) = xxx_todo_changeme1
+    assert isinstance(offset, int)
+    assert isinstance(size, int)
 
     max_chunk_size = (disk.size / 100.0 * constants.MIN_WIPE_CHUNK_PERCENT)
 
@@ -1607,7 +1609,8 @@ class _DiskWipeProgressTracker:
 
 
 class TestWipeDisks(unittest.TestCase):
-  def _FailingPauseCb(self, (disks, _), pause):
+  def _FailingPauseCb(self, xxx_todo_changeme2, pause):
+    (disks, _) = xxx_todo_changeme2
     self.assertEqual(len(disks), 3)
     self.assertTrue(pause)
     # Simulate an RPC error
@@ -1633,8 +1636,9 @@ class TestWipeDisks(unittest.TestCase):
 
     self.assertRaises(errors.OpExecError, instance_create.WipeDisks, lu, inst)
 
-  def _FailingWipeCb(self, (disk, _), offset, size):
+  def _FailingWipeCb(self, xxx_todo_changeme3, offset, size):
     # This should only ever be called for the first disk
+    (disk, _) = xxx_todo_changeme3
     self.assertEqual(disk.logical_id, "disk0")
     return (False, None)
 
@@ -1661,7 +1665,7 @@ class TestWipeDisks(unittest.TestCase):
 
     try:
       instance_create.WipeDisks(lu, inst)
-    except errors.OpExecError, err:
+    except errors.OpExecError as err:
       self.assertTrue(str(err), "Could not wipe disk 0 at offset 0 ")
     else:
       self.fail("Did not raise exception")

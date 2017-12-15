@@ -36,7 +36,7 @@
 # C0413: Wrong import position
 
 import re
-from cStringIO import StringIO
+from io import StringIO
 
 import docutils.statemachine
 import docutils.nodes
@@ -285,12 +285,12 @@ def PythonEvalRole(role, rawtext, text, lineno, inliner,
 
   try:
     result = eval(code, EVAL_NS) # pylint: disable=W0123
-  except Exception, err: # pylint: disable=W0703
+  except Exception as err: # pylint: disable=W0703
     msg = inliner.reporter.error("Failed to evaluate %r: %s" % (code, err),
                                  line=lineno)
     return ([inliner.problematic(rawtext, rawtext, msg)], [msg])
 
-  node = docutils.nodes.literal("", unicode(result), **options)
+  node = docutils.nodes.literal("", str(result), **options)
 
   return ([node], [])
 
@@ -318,7 +318,7 @@ class PythonAssert(Directive):
 
     try:
       result = eval(code, EVAL_NS) # pylint: disable=W0123
-    except Exception, err:
+    except Exception as err:
       raise self.error("Failed to evaluate %r: %s" % (code, err))
 
     if not result:
@@ -334,7 +334,7 @@ def BuildQueryFields(fields):
 
   """
   defs = [(fdef.name, fdef.doc)
-           for (_, (fdef, _, _, _)) in utils.NiceSort(fields.items(),
+           for (_, (fdef, _, _, _)) in utils.NiceSort(list(fields.items()),
                                                       key=compat.fst)]
   return BuildValuesDoc(defs)
 
@@ -426,7 +426,7 @@ def _ManPageRole(typ, rawtext, text, lineno, inliner, # pylint: disable=W0102
   try:
     result = xref(typ, rawtext, text, lineno, inliner,
                   options=options, content=content)
-  except ReSTError, err:
+  except ReSTError as err:
     msg = inliner.reporter.error(str(err), line=lineno)
     return ([inliner.problematic(rawtext, rawtext, msg)], [msg])
 
@@ -451,7 +451,7 @@ def _EncodeRapiResourceLink(method, uri):
   if method is not None:
     parts.append(method.lower())
 
-  return "rapi-res-%s" % "+".join(filter(None, parts))
+  return "rapi-res-%s" % "+".join([_f for _f in parts if _f])
 
 
 def _MakeRapiResourceLink(method, uri):
@@ -546,7 +546,7 @@ def _BuildRapiAccessTable(res):
   """Build a table with access permissions needed for all RAPI resources.
 
   """
-  for (uri, handler) in utils.NiceSort(res.items(), key=compat.fst):
+  for (uri, handler) in utils.NiceSort(list(res.items()), key=compat.fst):
     reslink = _MakeRapiResourceLink(None, uri)
     if not reslink:
       # No link was generated
@@ -636,7 +636,7 @@ def setup(app):
     # Access to a protected member of a client class
     # pylint: disable=W0212
     orig_manpage_role = docutils.parsers.rst.roles._roles["manpage"]
-  except (AttributeError, ValueError, KeyError), err:
+  except (AttributeError, ValueError, KeyError) as err:
     # Normally the "manpage" role is registered by sphinx/roles.py
     raise Exception("Can't find reST role named 'manpage': %s" % err)
 

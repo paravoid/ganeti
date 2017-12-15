@@ -769,7 +769,7 @@ class _OpExecContext(object):
 class _JobProcessor(object):
   (DEFER,
    WAITDEP,
-   FINISHED) = range(1, 4)
+   FINISHED) = list(range(1, 4))
 
   def __init__(self, queue, opexec_fn, job,
                _timeout_strategy_factory=mcpu.LockAttemptTimeoutStrategy):
@@ -800,7 +800,7 @@ class _JobProcessor(object):
     # Find next opcode to run
     while True:
       try:
-        (idx, op) = job.ops_iter.next()
+        (idx, op) = next(job.ops_iter)
       except StopIteration:
         raise errors.ProgrammerError("Called for a finished job")
 
@@ -951,7 +951,7 @@ class _JobProcessor(object):
       assert op.status == constants.OP_STATUS_CANCELING
       return (constants.OP_STATUS_CANCELING, None)
 
-    except Exception, err: # pylint: disable=W0703
+    except Exception as err: # pylint: disable=W0703
       logging.exception("%s: Caught exception in %s",
                         opctx.log_prefix, opctx.summary)
       return (constants.OP_STATUS_ERROR, _EncodeOpError(err))
@@ -1151,7 +1151,7 @@ class _JobDependencyManager(object):
    ERROR,
    CANCEL,
    CONTINUE,
-   WRONGSTATUS) = range(1, 6)
+   WRONGSTATUS) = list(range(1, 6))
 
   def __init__(self, getstatus_fn):
     """Initializes this class.
@@ -1166,7 +1166,7 @@ class _JobDependencyManager(object):
 
     """
     return compat.any(job in jobs
-                      for jobs in self._waiters.values())
+                      for jobs in list(self._waiters.values()))
 
   def CheckAndRegister(self, job, dep_job_id, dep_status):
     """Checks if a dependency job has the requested status.
@@ -1192,7 +1192,7 @@ class _JobDependencyManager(object):
     # Get status of dependency job
     try:
       status = self._getstatus_fn(dep_job_id)
-    except errors.JobLost, err:
+    except errors.JobLost as err:
       return (self.ERROR, "Dependency error: %s" % err)
 
     assert status in constants.JOB_STATUS_ALL
@@ -1229,7 +1229,7 @@ class _JobDependencyManager(object):
     """Remove all jobs without actual waiters.
 
     """
-    for job_id in [job_id for (job_id, waiters) in self._waiters.items()
+    for job_id in [job_id for (job_id, waiters) in list(self._waiters.items())
                    if not waiters]:
       del self._waiters[job_id]
 
@@ -1257,7 +1257,7 @@ class JobQueue(object):
 
     # Get initial list of nodes
     self._nodes = dict((n.name, n.primary_ip)
-                       for n in cfg.GetAllNodesInfo().values()
+                       for n in list(cfg.GetAllNodesInfo().values())
                        if n.master_candidate)
 
     # Remove master node
@@ -1313,7 +1313,7 @@ class JobQueue(object):
 
     """
     # TODO: Change to "tuple(map(list, zip(*self._nodes.items())))"?
-    name_list = self._nodes.keys()
+    name_list = list(self._nodes.keys())
     addr_list = [self._nodes[name] for name in name_list]
     return name_list, addr_list
 
@@ -1499,7 +1499,7 @@ class JobQueue(object):
       logging.debug("Loading job from %s", filepath)
       try:
         raw_data = utils.ReadFile(filepath)
-      except EnvironmentError, err:
+      except EnvironmentError as err:
         if err.errno != errno.ENOENT:
           raise
       else:
@@ -1515,7 +1515,7 @@ class JobQueue(object):
     try:
       data = serializer.LoadJson(raw_data)
       job = _QueuedJob.Restore(self, data, writable, archived)
-    except Exception, err: # pylint: disable=W0703
+    except Exception as err: # pylint: disable=W0703
       raise errors.JobFileCorrupted(err)
 
     return job

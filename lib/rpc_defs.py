@@ -82,7 +82,7 @@ ACCEPT_OFFLINE_NODE = object()
  ED_MULTI_DISKS_DICT_DP,
  ED_SINGLE_DISK_DICT_DP,
  ED_NIC_DICT,
- ED_DEVICE_DICT) = range(1, 17)
+ ED_DEVICE_DICT) = list(range(1, 17))
 
 
 def _Prepare(calls):
@@ -115,7 +115,7 @@ def _BlockdevGetMirrorStatusPostProc(result):
 
   """
   if not result.fail_msg:
-    result.payload = map(objects.BlockDevStatus.FromDict, result.payload)
+    result.payload = list(map(objects.BlockDevStatus.FromDict, result.payload))
   return result
 
 
@@ -175,10 +175,11 @@ def _ImpExpStatusPostProc(result):
   return result
 
 
-def _TestDelayTimeout((duration, )):
+def _TestDelayTimeout(xxx_todo_changeme):
   """Calculate timeout for "test_delay" RPC.
 
   """
+  (duration, ) = xxx_todo_changeme
   return int(duration + 5)
 
 

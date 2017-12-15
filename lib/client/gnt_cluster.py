@@ -40,7 +40,7 @@ import os
 import time
 import tempfile
 
-from cStringIO import StringIO
+from io import StringIO
 
 import OpenSSL
 
@@ -171,7 +171,7 @@ def InitCluster(opts, args):
   try:
     vg_name = _InitVgName(opts, enabled_disk_templates)
     drbd_helper = _InitDrbdHelper(opts, enabled_disk_templates)
-  except errors.OpPrereqError, e:
+  except errors.OpPrereqError as e:
     ToStderr(str(e))
     return 1
 
@@ -268,7 +268,7 @@ def InitCluster(opts, args):
 
   try:
     primary_ip_version = int(opts.primary_ip_version)
-  except (ValueError, TypeError), err:
+  except (ValueError, TypeError) as err:
     ToStderr("Invalid primary ip version value: %s" % str(err))
     return 1
 
@@ -276,7 +276,7 @@ def InitCluster(opts, args):
   try:
     if master_netmask is not None:
       master_netmask = int(master_netmask)
-  except (ValueError, TypeError), err:
+  except (ValueError, TypeError) as err:
     ToStderr("Invalid master netmask value: %s" % str(err))
     return 1
 
@@ -500,7 +500,7 @@ def _FormatGroupedParams(paramsdict, roman=False):
 
   """
   ret = {}
-  for (item, val) in paramsdict.items():
+  for (item, val) in list(paramsdict.items()):
     if isinstance(val, dict):
       ret[item] = _FormatGroupedParams(val, roman=roman)
     elif roman and isinstance(val, int):
@@ -553,7 +553,7 @@ def ShowClusterConfig(opts, args):
     reserved_lvs = "(none)"
 
   enabled_hv = result["enabled_hypervisors"]
-  hvparams = dict((k, v) for k, v in result["hvparams"].iteritems()
+  hvparams = dict((k, v) for k, v in result["hvparams"].items()
                   if k in enabled_hv)
 
   info = [
@@ -816,7 +816,7 @@ def VerifyDisks(opts, args):
 
     ((bad_nodes, instances, missing), ) = result
 
-    for node, text in bad_nodes.items():
+    for node, text in list(bad_nodes.items()):
       ToStdout("Error gathering data on node %s: %s",
                node, utils.SafeEncode(text[-400:]))
       retcode = constants.EXIT_FAILURE
@@ -829,13 +829,13 @@ def VerifyDisks(opts, args):
       try:
         ToStdout("Activating disks for instance '%s'", iname)
         SubmitOpCode(op, opts=opts, cl=cl)
-      except errors.GenericError, err:
+      except errors.GenericError as err:
         nret, msg = FormatError(err)
         retcode |= nret
         ToStderr("Error activating disks for instance %s: %s", iname, msg)
 
     if missing:
-      for iname, ival in missing.iteritems():
+      for iname, ival in missing.items():
         all_missing = compat.all(x[0] in bad_nodes for x in ival)
         if all_missing:
           ToStdout("Instance %s cannot be verified as it lives on"
@@ -968,20 +968,20 @@ def _ReadAndVerifyCert(cert_filename, verify_private_key=False):
   """
   try:
     pem = utils.ReadFile(cert_filename)
-  except IOError, err:
+  except IOError as err:
     raise errors.X509CertError(cert_filename,
                                "Unable to read certificate: %s" % str(err))
 
   try:
     OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
-  except Exception, err:
+  except Exception as err:
     raise errors.X509CertError(cert_filename,
                                "Unable to load certificate: %s" % str(err))
 
   if verify_private_key:
     try:
       OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, pem)
-    except Exception, err:
+    except Exception as err:
       raise errors.X509CertError(cert_filename,
                                  "Unable to load private key: %s" % str(err))
 
@@ -1062,14 +1062,14 @@ def _RenewCrypto(new_cluster_cert, new_rapi_cert, # pylint: disable=R0911
     if spice_cert_filename:
       spice_cert_pem = _ReadAndVerifyCert(spice_cert_filename, True)
       spice_cacert_pem = _ReadAndVerifyCert(spice_cacert_filename)
-  except errors.X509CertError, err:
+  except errors.X509CertError as err:
     ToStderr("Unable to load X509 certificate from %s: %s", err[0], err[1])
     return 1
 
   if cds_filename:
     try:
       cds = utils.ReadFile(cds_filename)
-    except Exception, err: # pylint: disable=W0703
+    except Exception as err: # pylint: disable=W0703
       ToStderr("Can't load new cluster domain secret from %s: %s" %
                (cds_filename, str(err)))
       return 1
@@ -1249,10 +1249,10 @@ def _BuildGanetiPubKeys(options, pub_key_file=pathutils.SSH_PUB_KEYS, cl=None,
 
   online_nodes = get_online_nodes_fn([], cl=cl)
   ssh_ports = get_nodes_ssh_ports_fn(online_nodes + [master_node], cl)
-  ssh_port_map = dict(zip(online_nodes + [master_node], ssh_ports))
+  ssh_port_map = dict(list(zip(online_nodes + [master_node], ssh_ports)))
 
   node_uuids = get_node_uuids_fn(online_nodes + [master_node], cl)
-  node_uuid_map = dict(zip(online_nodes + [master_node], node_uuids))
+  node_uuid_map = dict(list(zip(online_nodes + [master_node], node_uuids)))
 
   nonmaster_nodes = [name for name in online_nodes
                      if name != master_node]
@@ -1410,7 +1410,7 @@ def SetClusterParams(opts, args):
 
   try:
     drbd_helper = _GetDrbdHelper(opts, enabled_disk_templates)
-  except errors.OpPrereqError, e:
+  except errors.OpPrereqError as e:
     ToStderr(str(e))
     return 1
 
@@ -1420,12 +1420,12 @@ def SetClusterParams(opts, args):
 
   # a list of (name, dict) we can pass directly to dict() (or [])
   hvparams = dict(opts.hvparams)
-  for hv_params in hvparams.values():
+  for hv_params in list(hvparams.values()):
     utils.ForceDictType(hv_params, constants.HVS_PARAMETER_TYPES)
 
   diskparams = dict(opts.diskparams)
 
-  for dt_params in diskparams.values():
+  for dt_params in list(diskparams.values()):
     utils.ForceDictType(dt_params, constants.DISK_DT_TYPES)
 
   beparams = opts.beparams
@@ -1486,10 +1486,10 @@ def SetClusterParams(opts, args):
 
   enabled_data_collectors = dict(
       (k, v.lower().startswith("t"))
-      for k, v in opts.enabled_data_collectors.items())
+      for k, v in list(opts.enabled_data_collectors.items()))
 
   unrecognized_data_collectors = [
-      k for k in enabled_data_collectors.keys()
+      k for k in list(enabled_data_collectors.keys())
       if k not in constants.DATA_COLLECTOR_NAMES]
   if unrecognized_data_collectors:
     ToStderr("Data collector names not recognized: %s" %
@@ -1497,8 +1497,8 @@ def SetClusterParams(opts, args):
 
   try:
     data_collector_interval = dict(
-        (k, long(1e6 * float(v)))
-        for (k, v) in opts.data_collector_interval.items())
+        (k, int(1e6 * float(v)))
+        for (k, v) in list(opts.data_collector_interval.items()))
   except ValueError:
     ToStderr("Can't transform all values to integers: {}".format(
         opts.data_collector_interval))
@@ -1806,7 +1806,7 @@ def _MaybeInstanceStartup(opts, inst_map, nodes_online,
 
   """
   start_inst_list = []
-  for (inst, nodes) in inst_map.items():
+  for (inst, nodes) in list(inst_map.items()):
     if not (nodes - nodes_online):
       # All nodes the instance lives on are back online
       start_inst_list.append(inst)
@@ -1855,7 +1855,7 @@ def _EpoOff(opts, node_list, inst_map):
   @return: The desired exit status
 
   """
-  if not _InstanceStart(opts, inst_map.keys(), False, no_remember=True):
+  if not _InstanceStart(opts, list(inst_map.keys()), False, no_remember=True):
     ToStderr("Please investigate and stop instances manually before continuing")
     return constants.EXIT_FAILURE
 
@@ -1901,7 +1901,7 @@ def Epo(opts, args, qcl=None, _on_fn=_EpoOn, _off_fn=_EpoOff,
                                             "sinst_list", "powered", "offline"],
                           False)
 
-  all_nodes = map(compat.fst, result)
+  all_nodes = list(map(compat.fst, result))
   node_list = []
   inst_map = {}
   for (node, master, pinsts, sinsts, powered, offline) in result:

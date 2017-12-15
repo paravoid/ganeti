@@ -36,7 +36,7 @@ from ganeti import constants
 from ganeti import errors
 from ganeti import utils
 
-import testutils
+from . import testutils
 
 
 class TestRetry(testutils.GanetiTestCase):
@@ -83,37 +83,37 @@ class TestRetry(testutils.GanetiTestCase):
       return True
 
   def testRaiseTimeout(self):
-    self.failUnlessRaises(utils.RetryTimeout, utils.Retry,
+    self.assertRaises(utils.RetryTimeout, utils.Retry,
                           self._RaiseRetryAgain, 0.01, 0.02,
                           wait_fn = self._wait_fn, _time_fn = self._time_fn)
-    self.failUnlessRaises(utils.RetryTimeout, utils.Retry,
+    self.assertRaises(utils.RetryTimeout, utils.Retry,
                           self._RetryAndSucceed, 0.01, 0, args=[1],
                           wait_fn = self._wait_fn, _time_fn = self._time_fn)
-    self.failUnlessEqual(self.retries, 1)
+    self.assertEqual(self.retries, 1)
 
   def testComplete(self):
-    self.failUnlessEqual(utils.Retry(lambda: True, 0, 1,
+    self.assertEqual(utils.Retry(lambda: True, 0, 1,
                                      wait_fn = self._wait_fn,
                                      _time_fn = self._time_fn),
                          True)
-    self.failUnlessEqual(utils.Retry(self._RetryAndSucceed, 0, 1, args=[2],
+    self.assertEqual(utils.Retry(self._RetryAndSucceed, 0, 1, args=[2],
                                      wait_fn = self._wait_fn,
                                      _time_fn = self._time_fn),
                          True)
-    self.failUnlessEqual(self.retries, 2)
+    self.assertEqual(self.retries, 2)
 
   def testCompleteNontrivialTimes(self):
     self.time_for_time_fn = 0.01
     self.time_for_retry_and_succeed = 0.1
-    self.failUnlessEqual(utils.Retry(self._RetryAndSucceed, 0, 1, args=[2],
+    self.assertEqual(utils.Retry(self._RetryAndSucceed, 0, 1, args=[2],
                                      wait_fn = self._wait_fn,
                                      _time_fn = self._time_fn),
                          True)
-    self.failUnlessEqual(self.retries, 2)
+    self.assertEqual(self.retries, 2)
 
   def testNestedLoop(self):
     try:
-      self.failUnlessRaises(errors.ProgrammerError, utils.Retry,
+      self.assertRaises(errors.ProgrammerError, utils.Retry,
                             self._WrongNestedLoop, 0, 1,
                             wait_fn = self._wait_fn, _time_fn = self._time_fn)
     except utils.RetryTimeout:
@@ -124,8 +124,8 @@ class TestRetry(testutils.GanetiTestCase):
     try:
       utils.Retry(self._RaiseRetryAgainWithArg, 0.01, 0.02, args=[[retry_arg]],
                   wait_fn = self._wait_fn, _time_fn = self._time_fn)
-    except utils.RetryTimeout, err:
-      self.failUnlessEqual(err.args, (retry_arg, ))
+    except utils.RetryTimeout as err:
+      self.assertEqual(err.args, (retry_arg, ))
     else:
       self.fail("Expected timeout didn't happen")
 
@@ -135,15 +135,15 @@ class TestRetry(testutils.GanetiTestCase):
     try:
       utils.Retry(self._RetryAndSucceed, 1, 18, args=[2],
                   wait_fn = self._wait_fn, _time_fn = self._time_fn)
-    except utils.RetryTimeout, err:
-      self.failUnlessEqual(err.args, ())
+    except utils.RetryTimeout as err:
+      self.assertEqual(err.args, ())
     else:
       self.fail("Expected timeout didn't happen")
 
   def testNoTimeout(self):
     self.time_for_time_fn = 0.01
     self.time_for_retry_and_succeed = 8
-    self.failUnlessEqual(
+    self.assertEqual(
       utils.Retry(self._RetryAndSucceed, 1, 18, args=[2],
                   wait_fn = self._wait_fn, _time_fn = self._time_fn),
       True)
@@ -155,12 +155,12 @@ class TestRetry(testutils.GanetiTestCase):
         utils.Retry(self._RaiseRetryAgainWithArg, 0.01, 0.02,
                     args=[[errors.GenericError(retry_arg, retry_arg)]],
                     wait_fn = self._wait_fn, _time_fn = self._time_fn)
-      except utils.RetryTimeout, err:
+      except utils.RetryTimeout as err:
         err.RaiseInner()
       else:
         self.fail("Expected timeout didn't happen")
-    except errors.GenericError, err:
-      self.failUnlessEqual(err.args, (retry_arg, retry_arg))
+    except errors.GenericError as err:
+      self.assertEqual(err.args, (retry_arg, retry_arg))
     else:
       self.fail("Expected GenericError didn't happen")
 
@@ -171,12 +171,12 @@ class TestRetry(testutils.GanetiTestCase):
         utils.Retry(self._RaiseRetryAgainWithArg, 0.01, 0.02,
                     args=[[retry_arg, retry_arg]],
                     wait_fn = self._wait_fn, _time_fn = self._time_fn)
-      except utils.RetryTimeout, err:
+      except utils.RetryTimeout as err:
         err.RaiseInner()
       else:
         self.fail("Expected timeout didn't happen")
-    except utils.RetryTimeout, err:
-      self.failUnlessEqual(err.args, (retry_arg, retry_arg))
+    except utils.RetryTimeout as err:
+      self.assertEqual(err.args, (retry_arg, retry_arg))
     else:
       self.fail("Expected RetryTimeout didn't happen")
 

@@ -157,7 +157,7 @@ def AddAuthorizedKeys(file_obj, keys):
   """
   key_field_list = [(key, _SplitSshKey(key)) for key in keys]
 
-  if isinstance(file_obj, basestring):
+  if isinstance(file_obj, str):
     f = open(file_obj, "a+")
   else:
     f = file_obj
@@ -193,7 +193,7 @@ def HasAuthorizedKey(file_obj, key):
   """
   key_fields = _SplitSshKey(key)
 
-  if isinstance(file_obj, basestring):
+  if isinstance(file_obj, str):
     f = open(file_obj, "r")
   else:
     f = file_obj
@@ -221,7 +221,7 @@ def CheckForMultipleKeys(file_obj, node_names):
 
   """
 
-  if isinstance(file_obj, basestring):
+  if isinstance(file_obj, str):
     f = open(file_obj, "r")
   else:
     f = file_obj
@@ -244,7 +244,7 @@ def CheckForMultipleKeys(file_obj, node_names):
     f.close()
 
   bad_occurrences = {}
-  for user_hostname, occ in occurrences.items():
+  for user_hostname, occ in list(occurrences.items()):
     _, hostname = user_hostname.split("@")
     if hostname in node_names and len(occ) > 1:
       bad_occurrences[user_hostname] = occ
@@ -620,7 +620,7 @@ def ReplaceNameByUuid(node_uuid, node_name, key_file=pathutils.SSH_PUB_KEYS,
                         error_fn=error_fn)
 
 
-def ClearPubKeyFile(key_file=pathutils.SSH_PUB_KEYS, mode=0600):
+def ClearPubKeyFile(key_file=pathutils.SSH_PUB_KEYS, mode=0o600):
   """Resets the content of the public key file.
 
   """
@@ -635,7 +635,7 @@ def OverridePubKeyFile(key_map, key_file=pathutils.SSH_PUB_KEYS):
 
   """
   new_lines = []
-  for (uuid, keys) in key_map.items():
+  for (uuid, keys) in list(key_map.items()):
     for key in keys:
       new_lines.append("%s %s\n" % (uuid, key))
   new_file_content = "".join(new_lines)
@@ -849,7 +849,7 @@ class SshRunner(object):
     argv.extend("export %s=%s;" %
                 (utils.ShellQuote(name), utils.ShellQuote(value))
                 for (name, value) in
-                  vcluster.EnvironmentForHost(hostname).items())
+                  list(vcluster.EnvironmentForHost(hostname).items()))
 
     argv.append(command)
 
@@ -965,7 +965,7 @@ def WriteKnownHostsFile(cfg, file_name):
   if cfg.GetDsaHostKey():
     data += "%s ssh-dss %s\n" % (cfg.GetClusterName(), cfg.GetDsaHostKey())
 
-  utils.WriteFile(file_name, mode=0600, data=data)
+  utils.WriteFile(file_name, mode=0o600, data=data)
 
 
 def _EnsureCorrectGanetiVersion(cmd):

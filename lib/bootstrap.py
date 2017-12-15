@@ -73,7 +73,7 @@ def GenerateHmacKey(file_name):
   @param file_name: Path to output file
 
   """
-  utils.WriteFile(file_name, data="%s\n" % utils.GenerateSecret(), mode=0400,
+  utils.WriteFile(file_name, data="%s\n" % utils.GenerateSecret(), mode=0o400,
                   backup=True)
 
 
@@ -177,7 +177,7 @@ def GenerateClusterCrypto(new_cluster_cert, new_rapi_cert, new_spice_cert,
     # certificate
     logging.debug("Writing the public certificate to %s",
                   spicecert_file)
-    utils.io.WriteFile(spicecacert_file, mode=0400, data=cert_pem)
+    utils.io.WriteFile(spicecacert_file, mode=0o400, data=cert_pem)
 
   # Cluster domain secret
   if cds:
@@ -311,8 +311,8 @@ def _InitFileStorageDir(file_storage_dir):
 
   if not os.path.exists(file_storage_dir):
     try:
-      os.makedirs(file_storage_dir, 0750)
-    except OSError, err:
+      os.makedirs(file_storage_dir, 0o750)
+    except OSError as err:
       raise errors.OpPrereqError("Cannot create file storage directory"
                                  " '%s': %s" % (file_storage_dir, err),
                                  errors.ECODE_ENVIRON)
@@ -470,7 +470,7 @@ def _InitCheckDrbdHelper(drbd_helper, drbd_enabled):
   if drbd_helper is not None:
     try:
       curr_helper = drbd.DRBD8.GetUsermodeHelper()
-    except errors.BlockDeviceError, err:
+    except errors.BlockDeviceError as err:
       raise errors.OpPrereqError("Error while checking drbd helper"
                                  " (disable drbd with --enabled-disk-templates"
                                  " if you are not using drbd): %s" % str(err),
@@ -652,7 +652,7 @@ def InitCluster(cluster_name, mac_prefix, # pylint: disable=R0913, R0914
   # FIXME: Make utils.ForceDictType pure functional or write a wrapper
   # around it
   if hv_state:
-    for hvname, hvs_data in hv_state.items():
+    for hvname, hvs_data in list(hv_state.items()):
       utils.ForceDictType(hvs_data, constants.HVSTS_PARAMETER_TYPES)
       hv_state[hvname] = objects.Cluster.SimpleFillHvState(hvs_data)
   else:
@@ -661,22 +661,22 @@ def InitCluster(cluster_name, mac_prefix, # pylint: disable=R0913, R0914
 
   # FIXME: disk_state has no default values yet
   if disk_state:
-    for storage, ds_data in disk_state.items():
+    for storage, ds_data in list(disk_state.items()):
       if storage not in constants.DS_VALID_TYPES:
         raise errors.OpPrereqError("Invalid storage type in disk state: %s" %
                                    storage, errors.ECODE_INVAL)
-      for ds_name, state in ds_data.items():
+      for ds_name, state in list(ds_data.items()):
         utils.ForceDictType(state, constants.DSS_PARAMETER_TYPES)
         ds_data[ds_name] = objects.Cluster.SimpleFillDiskState(state)
 
   # hvparams is a mapping of hypervisor->hvparams dict
-  for hv_name, hv_params in hvparams.iteritems():
+  for hv_name, hv_params in hvparams.items():
     utils.ForceDictType(hv_params, constants.HVS_PARAMETER_TYPES)
     hv_class = hypervisor.GetHypervisor(hv_name)
     hv_class.CheckParameterSyntax(hv_params)
 
   # diskparams is a mapping of disk-template->diskparams dict
-  for template, dt_params in diskparams.items():
+  for template, dt_params in list(diskparams.items()):
     param_keys = set(dt_params.keys())
     default_param_keys = set(constants.DISK_DT_DEFAULTS[template].keys())
     if param_keys > default_param_keys:
@@ -693,7 +693,7 @@ def InitCluster(cluster_name, mac_prefix, # pylint: disable=R0913, R0914
 
   try:
     utils.VerifyDictOptions(diskparams, constants.DISK_DT_DEFAULTS)
-  except errors.OpPrereqError, err:
+  except errors.OpPrereqError as err:
     raise errors.OpPrereqError("While verify diskparam options: %s" % err,
                                errors.ECODE_INVAL)
 
@@ -734,7 +734,7 @@ def InitCluster(cluster_name, mac_prefix, # pylint: disable=R0913, R0914
   # check if we have all the users we need
   try:
     runtime.GetEnts()
-  except errors.ConfigurationError, err:
+  except errors.ConfigurationError as err:
     raise errors.OpPrereqError("Required system user/group missing: %s" %
                                err, errors.ECODE_ENVIRON)
 
@@ -879,7 +879,7 @@ def InitConfig(version, cluster_config, master_node_config,
                                    ctime=now, mtime=now)
   utils.WriteFile(cfg_file,
                   data=serializer.Dump(config_data.ToDict()),
-                  mode=0600)
+                  mode=0o600)
 
 
 def FinalizeClusterDestroy(master_uuid):
@@ -1068,7 +1068,7 @@ def MasterFailover(no_voting=False):
                  " %s, please disable manually: %s" % (old_master, msg))
       logging.error("%s", warning)
       warnings.append(warning)
-  except errors.ConfigurationError, err:
+  except errors.ConfigurationError as err:
     logging.error("Error while trying to set the new master: %s",
                   str(err))
     return 1, warnings
@@ -1175,7 +1175,7 @@ def _GatherMasterVotes(node_names):
     return [(None, len(node_names))]
 
   votes = {}
-  for (node_name, nres) in results.iteritems():
+  for (node_name, nres) in results.items():
     msg = nres.fail_msg
     if msg:
       logging.warning("Error contacting node %s: %s", node_name, msg)
@@ -1189,7 +1189,7 @@ def _GatherMasterVotes(node_names):
     else:
       votes[node] += 1
 
-  vote_list = votes.items()
+  vote_list = list(votes.items())
   vote_list.sort(key=lambda x: x[1], reverse=True)
   return vote_list
 

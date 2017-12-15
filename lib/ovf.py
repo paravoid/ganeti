@@ -39,7 +39,7 @@
 # C0413 Wrong import position
 
 
-import ConfigParser
+import configparser
 import errno
 import logging
 import os
@@ -195,7 +195,7 @@ def LinkFile(old_path, prefix=None, suffix=None, directory=None):
     try:
       os.link(old_path, new_path)
       break
-    except OSError, err:
+    except OSError as err:
       if err.errno == errno.EEXIST:
         new_path = utils.PathJoin(directory,
                                   "%s_%s%s" % (prefix, counter, suffix))
@@ -238,7 +238,7 @@ class OVFReader(object):
     self.tree = ET.ElementTree()
     try:
       self.tree.parse(input_path)
-    except (ParseError, xml.parsers.expat.ExpatError), err:
+    except (ParseError, xml.parsers.expat.ExpatError) as err:
       raise errors.OpPrereqError("Error while reading %s file: %s" %
                                  (OVF_EXT, err), errors.ECODE_ENVIRON)
 
@@ -281,7 +281,7 @@ class OVFReader(object):
     """
     current_list = self.tree.findall(path)
     results = [x.get(attribute) for x in current_list]
-    return filter(None, results)
+    return [_f for _f in results if _f]
 
   def _GetElementMatchingAttr(self, path, match_attr):
     """Searches for element on a path that matches certain attribute value.
@@ -370,7 +370,7 @@ class OVFReader(object):
       files_with_paths = [utils.PathJoin(self.input_dir, file_name)
                           for file_name in self.files_list]
       sha1_sums = utils.FingerprintFiles(files_with_paths)
-      for file_name, value in manifest_files.iteritems():
+      for file_name, value in manifest_files.items():
         if sha1_sums.get(utils.PathJoin(self.input_dir, file_name)) != value:
           raise errors.OpPrereqError("SHA1 checksum of %s does not match the"
                                      " value in manifest file" % file_name,
@@ -462,7 +462,7 @@ class OVFReader(object):
     memory_raw = None
     if memory is not None:
       alloc_units = memory.findtext("{%s}AllocationUnits" % RASD_SCHEMA)
-      matching_units = [units for units, variants in ALLOCATION_UNITS.items()
+      matching_units = [units for units, variants in list(ALLOCATION_UNITS.items())
                         if alloc_units.lower() in variants]
       if matching_units == []:
         raise errors.OpPrereqError("Unit %s for RAM memory unknown" %
@@ -563,7 +563,7 @@ class OVFReader(object):
       results["nic%s_mac" % counter] = mac_data
 
       # GanetiSection data overrides 'manually' collected data
-      for name, value in ganeti_data.iteritems():
+      for name, value in ganeti_data.items():
         results["nic%s_%s" % (counter, name)] = value
 
       # Bridged network has no IP - unless specifically stated otherwise
@@ -733,7 +733,7 @@ class OVFWriter(object):
     assert(data.get("name"))
     name = SubElementText(root, "gnt:Name", data["name"])
     params = ET.SubElement(root, "gnt:Parameters")
-    for name, value in data.iteritems():
+    for name, value in data.items():
       if name != "name":
         SubElementText(params, "gnt:%s" % name, value)
 
@@ -1127,7 +1127,7 @@ class OVFImporter(Converter):
       file_normname = os.path.normpath(file_name)
       try:
         utils.PathJoin(temp_dir, file_normname)
-      except ValueError, err:
+      except ValueError as err:
         raise errors.OpPrereqError("File %s inside %s package is not safe" %
                                    (file_name, OVA_EXT), errors.ECODE_ENVIRON)
       if file_name.endswith(OVF_EXT):
@@ -1148,7 +1148,7 @@ class OVFImporter(Converter):
           ova_content.extract(member, path=self.temp_dir)
       else:
         extract(self.temp_dir)
-    except tarfile.TarError, err:
+    except tarfile.TarError as err:
       raise errors.OpPrereqError("Error while extracting %s archive: %s" %
                                  (OVA_EXT, err), errors.ECODE_ENVIRON)
     logging.info("OVA package extracted to %s directory", self.temp_dir)
@@ -1173,7 +1173,7 @@ class OVFImporter(Converter):
     self.output_dir = utils.PathJoin(self.output_dir, self.results_name)
     try:
       utils.Makedirs(self.output_dir)
-    except OSError, err:
+    except OSError as err:
       raise errors.OpPrereqError("Failed to create directory %s: %s" %
                                  (self.output_dir, err), errors.ECODE_ENVIRON)
 
@@ -1474,9 +1474,9 @@ class OVFImporter(Converter):
                                       constants.EXPORT_CONF_FILE)
 
     output = []
-    for section, options in results.iteritems():
+    for section, options in results.items():
       output.append("[%s]" % section)
-      for name, value in options.iteritems():
+      for name, value in options.items():
         if value is None:
           value = ""
         output.append("%s = %s" % (name, value))
@@ -1485,29 +1485,29 @@ class OVFImporter(Converter):
 
     try:
       utils.WriteFile(output_file_name, data=output_contents)
-    except errors.ProgrammerError, err:
+    except errors.ProgrammerError as err:
       raise errors.OpPrereqError("Saving the config file failed: %s" % err,
                                  errors.ECODE_ENVIRON)
 
     self.Cleanup()
 
 
-class ConfigParserWithDefaults(ConfigParser.SafeConfigParser):
+class ConfigParserWithDefaults(configparser.SafeConfigParser):
   """This is just a wrapper on SafeConfigParser, that uses default values
 
   """
   def get(self, section, options, raw=None, vars=None): # pylint: disable=W0622
     try:
-      result = ConfigParser.SafeConfigParser.get(self, section, options,
+      result = configparser.SafeConfigParser.get(self, section, options,
                                                  raw=raw, vars=vars)
-    except ConfigParser.NoOptionError:
+    except configparser.NoOptionError:
       result = None
     return result
 
   def getint(self, section, options):
     try:
-      result = ConfigParser.SafeConfigParser.get(self, section, options)
-    except ConfigParser.NoOptionError:
+      result = configparser.SafeConfigParser.get(self, section, options)
+    except configparser.NoOptionError:
       result = 0
     return int(result)
 
@@ -1565,7 +1565,7 @@ class OVFExporter(Converter):
     logging.info("Reading configuration from %s file", input_path)
     try:
       self.config_parser.read(input_path)
-    except ConfigParser.MissingSectionHeaderError, err:
+    except configparser.MissingSectionHeaderError as err:
       raise errors.OpPrereqError("Error when trying to read %s: %s" %
                                  (input_path, err), errors.ECODE_ENVIRON)
     if self.options.ova_package:
@@ -1759,7 +1759,7 @@ class OVFExporter(Converter):
     """
     try:
       utils.Makedirs(self.output_dir)
-    except OSError, err:
+    except OSError as err:
       raise errors.OpPrereqError("Failed to create directory %s: %s" %
                                  (self.output_dir, err), errors.ECODE_ENVIRON)
 
@@ -1787,14 +1787,14 @@ class OVFExporter(Converter):
     files_list.extend(self.references_files)
     logging.warning("Calculating SHA1 checksums, this may take a while")
     sha1_sums = utils.FingerprintFiles(files_list)
-    for file_path, value in sha1_sums.iteritems():
+    for file_path, value in sha1_sums.items():
       file_name = os.path.basename(file_path)
       lines.append("SHA1(%s)= %s" % (file_name, value))
     lines.append("")
     data = "\n".join(lines)
     try:
       utils.WriteFile(path, data=data)
-    except errors.ProgrammerError, err:
+    except errors.ProgrammerError as err:
       raise errors.OpPrereqError("Saving the manifest file failed: %s" % err,
                                  errors.ECODE_ENVIRON)
 
@@ -1853,7 +1853,7 @@ class OVFExporter(Converter):
       packed_path = utils.PathJoin(self.packed_dir, ova_file)
       try:
         utils.Makedirs(self.packed_dir)
-      except OSError, err:
+      except OSError as err:
         raise errors.OpPrereqError("Failed to create directory %s: %s" %
                                    (self.packed_dir, err),
                                    errors.ECODE_ENVIRON)

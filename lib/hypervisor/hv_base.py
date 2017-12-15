@@ -66,7 +66,7 @@ def _IsCpuMaskWellFormed(cpu_mask):
   """
   try:
     cpu_list = utils.ParseCpuMask(cpu_mask)
-  except errors.ParseError, _:
+  except errors.ParseError as _:
     return False
   return isinstance(cpu_list, list) and len(cpu_list) > 0
 
@@ -80,7 +80,7 @@ def _IsMultiCpuMaskWellFormed(cpu_mask):
   """
   try:
     utils.ParseMultiCpuMask(cpu_mask)
-  except errors.ParseError, _:
+  except errors.ParseError as _:
     return False
 
   return True
@@ -596,7 +596,7 @@ class BaseHypervisor(object):
 
     """
     return param_value is None \
-      or isinstance(param_value, basestring) and param_value == ""
+      or isinstance(param_value, str) and param_value == ""
 
   @classmethod
   def CheckParameterSyntax(cls, hvparams):
@@ -615,7 +615,7 @@ class BaseHypervisor(object):
         raise errors.HypervisorError("Parameter '%s' is not supported" % key)
 
     # cheap tests that run on the master, should not access the world
-    for name, (required, check_fn, errstr, _, _) in cls.PARAMETERS.items():
+    for name, (required, check_fn, errstr, _, _) in list(cls.PARAMETERS.items()):
       if name not in hvparams:
         raise errors.HypervisorError("Parameter '%s' is missing" % name)
       value = hvparams[name]
@@ -641,7 +641,7 @@ class BaseHypervisor(object):
     @raise errors.HypervisorError: when a parameter is not valid
 
     """
-    for name, (required, _, _, check_fn, errstr) in cls.PARAMETERS.items():
+    for name, (required, _, _, check_fn, errstr) in list(cls.PARAMETERS.items()):
       value = hvparams[name]
       if not required and cls._IsParamValueUnspecified(value):
         continue
@@ -690,7 +690,7 @@ class BaseHypervisor(object):
     """
     try:
       data = utils.ReadFile(meminfo).splitlines()
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       raise errors.HypervisorError("Failed to list node info: %s" % (err,))
 
     result = {}
@@ -708,7 +708,7 @@ class BaseHypervisor(object):
             sum_free += int(val.split()[0]) / 1024
           elif key == "Active":
             result["memory_dom0"] = int(val.split()[0]) / 1024
-    except (ValueError, TypeError), err:
+    except (ValueError, TypeError) as err:
       raise errors.HypervisorError("Failed to compute memory usage: %s" %
                                    (err,))
     result["memory_free"] = sum_free
@@ -721,7 +721,7 @@ class BaseHypervisor(object):
                                    fh.read()))
       finally:
         fh.close()
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       raise errors.HypervisorError("Failed to list node info: %s" % (err,))
     result["cpu_total"] = cpu_total
     # We assume that the node OS can access all the CPUs

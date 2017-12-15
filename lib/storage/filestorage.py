@@ -165,7 +165,7 @@ class FileDeviceHelper(object):
       f = open(self.path, "a+")
       f.truncate(new_size)
       f.close()
-    except EnvironmentError, err:
+    except EnvironmentError as err:
       base.ThrowError("%s: can't grow: ", self.path, str(err))
 
   def Move(self, new_path):
@@ -178,7 +178,7 @@ class FileDeviceHelper(object):
     try:
       os.rename(self.path, new_path)
       self.path = new_path
-    except OSError, err:
+    except OSError as err:
       base.ThrowError("%s: can't rename to %s: ", str(err), new_path)
 
 
@@ -328,7 +328,7 @@ def GetFileStorageSpaceInfo(path):
             "name": path,
             "storage_size": size,
             "storage_free": free}
-  except OSError, e:
+  except OSError as e:
     raise errors.CommandError("Failed to retrieve file system information about"
                               " path: %s - %s" % (path, e.strerror))
 
@@ -353,7 +353,7 @@ def _GetForbiddenFileStoragePaths():
     paths.update(
         "%s/%s" % (prefix, s) for s in ["bin", "lib", "lib32", "lib64", "sbin"])
 
-  return compat.UniqueFrozenset(map(os.path.normpath, paths))
+  return compat.UniqueFrozenset(list(map(os.path.normpath, paths)))
 
 
 def _ComputeWrongFileStoragePaths(paths,
@@ -373,7 +373,7 @@ def _ComputeWrongFileStoragePaths(paths,
             path in _forbidden or
             [p for p in _forbidden if utils.IsBelowDir(p, path)])
 
-  return utils.NiceSort(filter(_Check, map(os.path.normpath, paths)))
+  return utils.NiceSort(list(filter(_Check, list(map(os.path.normpath, paths)))))
 
 
 def ComputeWrongFileStoragePaths(_filename=pathutils.FILE_STORAGE_PATHS_FILE):

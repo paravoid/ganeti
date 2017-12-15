@@ -117,7 +117,7 @@ def UpdateAuthorizedKeys(data, dry_run, _homedir_fn=None):
                         _homedir_fn=_homedir_fn)
 
   key_values = []
-  for key_value in authorized_keys.values():
+  for key_value in list(authorized_keys.values()):
     key_values += key_value
   if action == constants.SSHS_ADD:
     if dry_run:
@@ -125,7 +125,7 @@ def UpdateAuthorizedKeys(data, dry_run, _homedir_fn=None):
                    auth_keys_file)
     else:
       if not os.path.exists(auth_keys_file):
-        utils.WriteFile(auth_keys_file, mode=0600, data="")
+        utils.WriteFile(auth_keys_file, mode=0o600, data="")
       ssh.AddAuthorizedKeys(auth_keys_file, key_values)
   elif action == constants.SSHS_REMOVE:
     if dry_run:
@@ -164,7 +164,7 @@ def UpdatePubKeyFile(data, dry_run, key_file=pathutils.SSH_PUB_KEYS):
       logging.info("This is a dry run, not adding or replacing a key to %s",
                    key_file)
     else:
-      for uuid, keys in public_keys.items():
+      for uuid, keys in list(public_keys.items()):
         if action == constants.SSHS_REPLACE_OR_ADD:
           ssh.RemovePublicKey(uuid, key_file=key_file)
         for key in keys:
@@ -173,7 +173,7 @@ def UpdatePubKeyFile(data, dry_run, key_file=pathutils.SSH_PUB_KEYS):
     if dry_run:
       logging.info("This is a dry run, not removing keys from %s", key_file)
     else:
-      for uuid in public_keys.keys():
+      for uuid in list(public_keys.keys()):
         ssh.RemovePublicKey(uuid, key_file=key_file)
   elif action == constants.SSHS_CLEAR:
     if dry_run:
@@ -225,7 +225,7 @@ def Main():
     GenerateRootSshKeys(data, opts.dry_run)
 
     logging.info("Setup finished successfully")
-  except Exception, err: # pylint: disable=W0703
+  except Exception as err: # pylint: disable=W0703
     logging.debug("Caught unhandled exception", exc_info=True)
 
     (retcode, message) = cli.FormatError(err)

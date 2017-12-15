@@ -40,8 +40,8 @@ from ganeti import serializer
 from ganeti import compat
 from ganeti import ht
 
-import qa_error
-import qa_logging
+from . import qa_error
+from . import qa_logging
 
 
 _INSTANCE_CHECK_KEY = "instance-check"
@@ -251,13 +251,14 @@ _RESOURCE_CONVERTER = {
   }
 
 
-def _ConvertResources((key, value)):
+def _ConvertResources(xxx_todo_changeme):
   """Converts cluster resources in configuration to Python objects.
 
   """
+  (key, value) = xxx_todo_changeme
   fn = _RESOURCE_CONVERTER.get(key, None)
   if fn:
-    return (key, map(fn, value))
+    return (key, list(map(fn, value)))
   else:
     return (key, value)
 
@@ -321,10 +322,10 @@ class _QaConfig(object):
 
     """
     patch_content = patches[patch_path]
-    print qa_logging.FormatInfo("Applying patch %s" % patch_path)
+    print(qa_logging.FormatInfo("Applying patch %s" % patch_path))
     if not patch_content and patch_path != _QA_DEFAULT_PATCH:
-      print qa_logging.FormatWarning("The patch %s added by the user is empty" %
-                                     patch_path)
+      print(qa_logging.FormatWarning("The patch %s added by the user is empty" %
+                                     patch_path))
     patch_module.apply_patch(data, patch_content, in_place=True)
 
   @staticmethod
@@ -352,11 +353,10 @@ class _QaConfig(object):
       order_file = open(order_path, 'r')
       ordered_patches = order_file.read().splitlines()
       # Removes empty lines
-      ordered_patches = filter(None, ordered_patches)
+      ordered_patches = [_f for _f in ordered_patches if _f]
 
     # Add the patch dir
-    ordered_patches = map(lambda x: os.path.join(_QA_PATCH_DIR, x),
-                          ordered_patches)
+    ordered_patches = [os.path.join(_QA_PATCH_DIR, x) for x in ordered_patches]
 
     # First the ordered patches
     for patch in ordered_patches:
@@ -400,8 +400,8 @@ class _QaConfig(object):
                            "need to install Python modules 'jsonpatch' and "
                            "'jsonpointer'.")
 
-    result = cls(dict(map(_ConvertResources,
-                          data.items()))) # pylint: disable=E1103
+    result = cls(dict(list(map(_ConvertResources,
+                          list(data.items()))))) # pylint: disable=E1103
     result.Validate()
 
     return result
@@ -431,7 +431,7 @@ class _QaConfig(object):
     if check:
       try:
         os.stat(check)
-      except EnvironmentError, err:
+      except EnvironmentError as err:
         raise qa_error.Error("Can't find instance check script '%s': %s" %
                              (check, err))
 
@@ -576,7 +576,7 @@ class _QaConfig(object):
     else:
       if value is None:
         return []
-      elif isinstance(value, basestring):
+      elif isinstance(value, str):
         return value.split(",")
       else:
         return value
@@ -879,7 +879,7 @@ def AcquireInstance(_cfg=None):
     cfg = _cfg
 
   # Filter out unwanted instances
-  instances = filter(lambda inst: not inst.used, cfg["instances"])
+  instances = [inst for inst in cfg["instances"] if not inst.used]
 
   if not instances:
     raise qa_error.OutOfInstancesError("No instances left")
@@ -906,7 +906,7 @@ def AcquireManyInstances(num, _cfg=None):
     cfg = _cfg
 
   # Filter out unwanted instances
-  instances = filter(lambda inst: not inst.used, cfg["instances"])
+  instances = [inst for inst in cfg["instances"] if not inst.used]
 
   if len(instances) < num:
     raise qa_error.OutOfInstancesError(
@@ -992,11 +992,11 @@ def AcquireNode(exclude=None, _cfg=None):
   if exclude is None:
     nodes = cfg["nodes"][:]
   elif isinstance(exclude, (list, tuple)):
-    nodes = filter(lambda node: node not in exclude, cfg["nodes"])
+    nodes = [node for node in cfg["nodes"] if node not in exclude]
   else:
-    nodes = filter(lambda node: node != exclude, cfg["nodes"])
+    nodes = [node for node in cfg["nodes"] if node != exclude]
 
-  nodes = filter(lambda node: node.added or node == master, nodes)
+  nodes = [node for node in nodes if node.added or node == master]
 
   if not nodes:
     raise qa_error.OutOfNodesError("No nodes left")

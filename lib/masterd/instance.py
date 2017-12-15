@@ -704,7 +704,7 @@ class ImportExportLoop(object):
     """
     daemon_status = {}
 
-    for node_name, names in daemons.iteritems():
+    for node_name, names in daemons.items():
       result = lu.rpc.call_impexp_status(node_name, names)
       if result.fail_msg:
         lu.LogWarning("Failed to get daemon status on %s: %s",
@@ -713,7 +713,7 @@ class ImportExportLoop(object):
 
       assert len(names) == len(result.payload)
 
-      daemon_status[node_name] = dict(zip(names, result.payload))
+      daemon_status[node_name] = dict(list(zip(names, result.payload)))
 
     return daemon_status
 
@@ -730,7 +730,7 @@ class ImportExportLoop(object):
       try:
         # Start daemon if necessary
         daemon_name = diskie.CheckDaemon()
-      except _ImportExportError, err:
+      except _ImportExportError as err:
         logging.exception("%s failed", diskie.MODE_TEXT)
         diskie.Finalize(error=str(err))
         continue
@@ -738,7 +738,7 @@ class ImportExportLoop(object):
       result.setdefault(diskie.node_name, []).append(daemon_name)
 
     assert len(queue) >= len(result)
-    assert len(queue) >= sum([len(names) for names in result.itervalues()])
+    assert len(queue) >= sum([len(names) for names in result.values()])
 
     logging.debug("daemons=%r", result)
 
@@ -809,7 +809,7 @@ class ImportExportLoop(object):
             delay = min(1.0, delay)
             continue
 
-        except _ImportExportError, err:
+        except _ImportExportError as err:
           logging.exception("%s failed", diskie.MODE_TEXT)
           diskie.Finalize(error=str(err))
 
@@ -1634,7 +1634,7 @@ def CheckRemoteExportHandshake(cds, handshake):
   """
   try:
     (version, hmac_digest, hmac_salt) = handshake
-  except (TypeError, ValueError), err:
+  except (TypeError, ValueError) as err:
     return "Invalid data: %s" % err
 
   if not utils.VerifySha1Hmac(cds, _GetImportExportHandshakeMessage(version),
@@ -1678,7 +1678,7 @@ def CheckRemoteExportDiskInfo(cds, disk_index, disk_info):
   """
   try:
     (host, port, magic, hmac_digest, hmac_salt) = disk_info
-  except (TypeError, ValueError), err:
+  except (TypeError, ValueError) as err:
     raise errors.GenericError("Invalid data: %s" % err)
 
   if not (host and port and magic):

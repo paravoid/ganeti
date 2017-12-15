@@ -36,11 +36,11 @@ import sys
 import optparse
 import time
 import socket
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import random
 import string # pylint: disable=W0402
-from itertools import izip, islice, cycle
-from cStringIO import StringIO
+from itertools import islice, cycle
+from io import StringIO
 from operator import or_
 
 from ganeti import opcodes
@@ -54,6 +54,7 @@ from ganeti import pathutils
 
 from ganeti.confd import client as confd_client
 from ganeti.runtime import (GetClient)
+from functools import reduce
 
 
 USAGE = ("\tburnin -o OS_NAME [options...] instance_name ...")
@@ -107,8 +108,8 @@ class BurninFailure(Exception):
 def Usage():
   """Shows program usage information and exits the program."""
 
-  print >> sys.stderr, "Usage:"
-  print >> sys.stderr, USAGE
+  print("Usage:", file=sys.stderr)
+  print(USAGE, file=sys.stderr)
   sys.exit(2)
 
 
@@ -137,7 +138,7 @@ def RandomString(size=8, chars=string.ascii_uppercase + string.digits):
   return ''.join(random.choice(chars) for x in range(size))
 
 
-class SimpleOpener(urllib.FancyURLopener):
+class SimpleOpener(urllib.request.FancyURLopener):
   """A simple url opener"""
   # pylint: disable=W0221
 
@@ -370,7 +371,7 @@ class JobHandler(FeedbackAccumulator):
         Log("Idempotent %s succeeded after %d retries",
             msg, MAX_RETRIES - retry_count)
       return val
-    except Exception, err: # pylint: disable=W0703
+    except Exception as err: # pylint: disable=W0703
       if retry_count == 0:
         Log("Non-idempotent %s failed, aborting", msg)
         raise
@@ -461,7 +462,7 @@ class JobHandler(FeedbackAccumulator):
       jex.QueueJob(name, *ops)
     try:
       results = jex.GetResults()
-    except Exception, err: # pylint: disable=W0703
+    except Exception as err: # pylint: disable=W0703
       Log("Jobs failed: %s", err)
       raise BurninFailure()
 
@@ -472,7 +473,7 @@ class JobHandler(FeedbackAccumulator):
         if post_process:
           try:
             post_process()
-          except Exception, err: # pylint: disable=W0703
+          except Exception as err: # pylint: disable=W0703
             Log("Post process call for job %s failed: %s", name, err)
             fail = True
         val.append(result)
@@ -584,7 +585,7 @@ class Burner(JobHandler):
     try:
       qcl = GetClient()
       result = qcl.QueryNodes(names, ["name", "offline", "drained"], False)
-    except errors.GenericError, err:
+    except errors.GenericError as err:
       err_code, msg = cli.FormatError(err)
       Err(msg, exit_code=err_code)
     finally:
@@ -624,7 +625,7 @@ class Burner(JobHandler):
   def FindMatchingDisk(self, instance):
     """Find a disk whose nodes match the instance's disk nodes."""
     instance_nodes = self.instance_nodes[instance]
-    for disk, disk_nodes in self.disk_nodes.iteritems():
+    for disk, disk_nodes in self.disk_nodes.items():
       if instance_nodes == disk_nodes:
         # Erase that disk from the dictionary so that we don't pick it again.
         del self.disk_nodes[disk]
@@ -638,7 +639,7 @@ class Burner(JobHandler):
 
     """
     self.to_rem = []
-    mytor = izip(cycle(self.nodes),
+    mytor = zip(cycle(self.nodes),
                  islice(cycle(self.nodes), 1, None),
                  self.instances)
 
@@ -731,7 +732,7 @@ class Burner(JobHandler):
     Log("Changing the secondary node")
     mode = constants.REPLACE_DISK_CHG
 
-    mytor = izip(islice(cycle(self.nodes), 2, None),
+    mytor = zip(islice(cycle(self.nodes), 2, None),
                  self.instances)
     for tnode, instance in mytor:
       Log("instance %s", instance, indent=1)
@@ -765,7 +766,7 @@ class Burner(JobHandler):
   def BurnMove(self):
     """Move the instances."""
     Log("Moving instances")
-    mytor = izip(islice(cycle(self.nodes), 1, None),
+    mytor = zip(islice(cycle(self.nodes), 1, None),
                  self.instances)
     for tnode, instance in mytor:
       Log("instance %s", instance, indent=1)
@@ -794,7 +795,7 @@ class Burner(JobHandler):
 
     """
     Log("Exporting and re-importing instances")
-    mytor = izip(cycle(self.nodes),
+    mytor = zip(cycle(self.nodes),
                  islice(cycle(self.nodes), 1, None),
                  islice(cycle(self.nodes), 2, None),
                  self.instances)
@@ -1255,7 +1256,7 @@ class Burner(JobHandler):
       if not self.opts.keep_instances:
         try:
           self.BurnRemove()
-        except Exception, err:  # pylint: disable=W0703
+        except Exception as err:  # pylint: disable=W0703
           if has_err: # already detected errors, so errors in removal
                       # are quite expected
             Log("Note: error detected during instance remove: %s", err)

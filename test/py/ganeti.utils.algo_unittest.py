@@ -38,7 +38,7 @@ from ganeti import constants
 from ganeti import compat
 from ganeti.utils import algo
 
-import testutils
+from . import testutils
 
 
 class TestUniqueSequence(unittest.TestCase):
@@ -84,7 +84,7 @@ class TestFindDuplicates(unittest.TestCase):
     self._Test("Hello World out there!", ["e", " ", "o", "r", "t", "l"])
 
     self._Test(self._Gen(False), [])
-    self._Test(self._Gen(True), range(1, 10))
+    self._Test(self._Gen(True), list(range(1, 10)))
 
   @staticmethod
   def _Gen(dup):
@@ -337,7 +337,7 @@ class TestSequenceToDict(unittest.TestCase):
       dict((hex(i), (i, hex(i), "test%s" % i))
            for i in range(100)))
     self.assertEqual(algo.SequenceToDict(data,
-                                         key=lambda (a, b, val): hash(val)),
+                                         key=lambda a_b_val: hash(a_b_val[2])),
       dict((hash("test%s" % i), (i, hex(i), "test%s" % i))
            for i in range(100)))
 

@@ -51,9 +51,9 @@ import ganeti.hypervisor.hv_kvm.netdev as netdev
 import ganeti.hypervisor.hv_kvm.monitor as monitor
 
 import mock
-import testutils
+from . import testutils
 
-from testutils.config_mock import ConfigMock
+from .testutils.config_mock import ConfigMock
 
 
 class QmpStub(threading.Thread):
@@ -154,7 +154,7 @@ class TestQmpMessage(testutils.GanetiTestCase):
       }
     message = hv_kvm.QmpMessage(test_data)
 
-    for k, v in test_data.items():
+    for k, v in list(test_data.items()):
       self.assertEqual(message[k], v)
 
     serialized = str(message)
@@ -588,15 +588,15 @@ class TestKvmRuntime(testutils.GanetiTestCase):
   def testDirectoriesCreated(self):
     hypervisor = hv_kvm.KVMHypervisor()
     self.mocks['ensure_dirs'].assert_called_with([
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/pid'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/uid'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/ctrl'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/conf'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/nic'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/chroot'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/chroot-quarantine'), 0775),
-        (PostfixMatcher('/run/ganeti/kvm-hypervisor/keymap'), 0775)])
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/pid'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/uid'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/ctrl'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/conf'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/nic'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/chroot'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/chroot-quarantine'), 0o775),
+        (PostfixMatcher('/run/ganeti/kvm-hypervisor/keymap'), 0o775)])
 
   def testStartInstance(self):
     hypervisor = hv_kvm.KVMHypervisor()

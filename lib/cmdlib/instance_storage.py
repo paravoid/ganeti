@@ -154,10 +154,10 @@ def _CreateBlockDevInner(lu, node_uuid, instance, device, force_create,
     created_devices = [(node_uuid, device)]
     return created_devices
 
-  except errors.DeviceCreationError, e:
+  except errors.DeviceCreationError as e:
     e.created_devices.extend(created_devices)
     raise e
-  except errors.OpExecError, e:
+  except errors.OpExecError as e:
     raise errors.DeviceCreationError(str(e), created_devices)
 
 
@@ -294,7 +294,7 @@ def CreateDisks(lu, instance, disk_template=None,
         _CreateBlockDev(lu, node_uuid, instance, device, f_create, info,
                         f_create)
         disks_created.append((node_uuid, device))
-      except errors.DeviceCreationError, e:
+      except errors.DeviceCreationError as e:
         logging.warning("Creating disk %s for instance '%s' failed",
                         idx, instance.name)
         disks_created.extend(e.created_devices)
@@ -431,13 +431,13 @@ def ComputeDisksInfo(disks, disk_template, default_vg, ext_params):
 
   """
   # Ensure 'ext_params' does not violate existing disks' params
-  for key in ext_params.keys():
+  for key in list(ext_params.keys()):
     if key != constants.IDISK_PROVIDER:
       assert key not in constants.IDISK_PARAMS, \
         "Invalid extstorage parameter '%s'" % key
 
   # Prepare the disks argument for the 'ComputeDisks' method.
-  inst_disks = [dict((key, value) for key, value in disk.iteritems()
+  inst_disks = [dict((key, value) for key, value in disk.items()
                      if key in constants.IDISK_PARAMS)
                 for disk in map(objects.Disk.ToDict, disks)]
 
@@ -850,7 +850,7 @@ class LUInstanceRecreateDisks(LogicalUnit):
       # Normalize and convert deprecated list of disk indices
       self.op.disks = [(idx, {}) for idx in sorted(frozenset(self.op.disks))]
 
-    duplicates = utils.FindDuplicates(map(compat.fst, self.op.disks))
+    duplicates = utils.FindDuplicates(list(map(compat.fst, self.op.disks)))
     if duplicates:
       raise errors.OpPrereqError("Some disks have been specified more than"
                                  " once: %s" % utils.CommaJoin(duplicates),
@@ -863,7 +863,7 @@ class LUInstanceRecreateDisks(LogicalUnit):
 
     for (idx, params) in self.op.disks:
       utils.ForceDictType(params, constants.IDISK_PARAMS_TYPES)
-      unsupported = frozenset(params.keys()) - self._MODIFYABLE
+      unsupported = frozenset(list(params.keys())) - self._MODIFYABLE
       if unsupported:
         raise errors.OpPrereqError("Parameters for disk %s try to change"
                                    " unmodifyable parameter(s): %s" %
@@ -998,7 +998,7 @@ class LUInstanceRecreateDisks(LogicalUnit):
                                  errors.ECODE_INVAL)
 
     if ((self.op.node_uuids or self.op.iallocator) and
-         sorted(self.disks.keys()) != range(len(instance.disks))):
+         sorted(self.disks.keys()) != list(range(len(instance.disks)))):
       raise errors.OpPrereqError("Can't recreate disks partially and"
                                  " change the nodes at the same time",
                                  errors.ECODE_INVAL)
@@ -1016,9 +1016,9 @@ class LUInstanceRecreateDisks(LogicalUnit):
     else:
       node_uuids = self.cfg.GetInstanceNodes(instance.uuid)
     excl_stor = compat.any(
-      rpc.GetExclusiveStorageForNodes(self.cfg, node_uuids).values()
+      list(rpc.GetExclusiveStorageForNodes(self.cfg, node_uuids).values())
       )
-    for new_params in self.disks.values():
+    for new_params in list(self.disks.values()):
       CheckSpindlesExclusiveStorage(new_params, excl_stor, False)
 
   def Exec(self, feedback_fn):
@@ -1197,7 +1197,7 @@ def CheckNodesFreeDiskPerVG(lu, node_uuids, req_sizes):
       or we cannot check the node
 
   """
-  for vg, req_size in req_sizes.items():
+  for vg, req_size in list(req_sizes.items()):
     _CheckNodesFreeDiskOnVG(lu, node_uuids, vg, req_size)
 
 
@@ -1254,7 +1254,7 @@ def WipeDisks(lu, instance, disks=None):
   logging.info("Pausing synchronization of disks of instance '%s'",
                instance.name)
   result = lu.rpc.call_blockdev_pause_resume_sync(node_uuid,
-                                                  (map(compat.snd, disks),
+                                                  (list(map(compat.snd, disks)),
                                                    instance),
                                                   True)
   result.Raise("Failed to pause disk synchronization on node '%s'" % node_name)
@@ -1312,7 +1312,7 @@ def WipeDisks(lu, instance, disks=None):
                  instance.name)
 
     result = lu.rpc.call_blockdev_pause_resume_sync(node_uuid,
-                                                    (map(compat.snd, disks),
+                                                    (list(map(compat.snd, disks)),
                                                      instance),
                                                     False)
 
@@ -1351,7 +1351,7 @@ def ImageDisks(lu, instance, image, disks=None):
   logging.info("Pausing synchronization of disks of instance '%s'",
                instance.name)
   result = lu.rpc.call_blockdev_pause_resume_sync(node_uuid,
-                                                  (map(compat.snd, disks),
+                                                  (list(map(compat.snd, disks)),
                                                    instance),
                                                   True)
   result.Raise("Failed to pause disk synchronization on node '%s'" % node_name)
@@ -1375,7 +1375,7 @@ def ImageDisks(lu, instance, image, disks=None):
                  instance.name)
 
     result = lu.rpc.call_blockdev_pause_resume_sync(node_uuid,
-                                                    (map(compat.snd, disks),
+                                                    (list(map(compat.snd, disks)),
                                                      instance),
                                                     False)
 
@@ -2401,7 +2401,7 @@ class TLReplaceDisks(Tasklet):
 
       # If not specified all disks should be replaced
       if not self.disks:
-        self.disks = range(len(self.instance.disks))
+        self.disks = list(range(len(self.instance.disks)))
 
     disks = self.cfg.GetInstanceDisks(self.instance.uuid)
     if (not disks or
@@ -2455,7 +2455,7 @@ class TLReplaceDisks(Tasklet):
       owned_nodes = self.lu.owned_locks(locking.LEVEL_NODE)
       assert set(owned_nodes) == set(self.node_secondary_ip), \
           ("Incorrect node locks, owning %s, expected %s" %
-           (owned_nodes, self.node_secondary_ip.keys()))
+           (owned_nodes, list(self.node_secondary_ip.keys())))
       assert (self.lu.owned_locks(locking.LEVEL_NODE) ==
               self.lu.owned_locks(locking.LEVEL_NODE_RES))
 
@@ -2615,13 +2615,13 @@ class TLReplaceDisks(Tasklet):
           _CreateBlockDevInner(self.lu, node_uuid, self.instance, new_lv, True,
                                GetInstanceInfoText(self.instance), False,
                                excl_stor)
-        except errors.DeviceCreationError, e:
+        except errors.DeviceCreationError as e:
           raise errors.OpExecError("Can't create block device: %s" % e.message)
 
     return iv_names
 
   def _CheckDevices(self, node_uuid, iv_names):
-    for name, (dev, _, _) in iv_names.iteritems():
+    for name, (dev, _, _) in iv_names.items():
       result = _BlockdevFind(self, node_uuid, dev, self.instance)
 
       msg = result.fail_msg
@@ -2635,7 +2635,7 @@ class TLReplaceDisks(Tasklet):
         raise errors.OpExecError("DRBD device %s is degraded!" % name)
 
   def _RemoveOldStorage(self, node_uuid, iv_names):
-    for name, (_, old_lvs, _) in iv_names.iteritems():
+    for name, (_, old_lvs, _) in iv_names.items():
       self.lu.LogInfo("Remove logical volumes for %s", name)
 
       for lv in old_lvs:
@@ -2690,7 +2690,7 @@ class TLReplaceDisks(Tasklet):
 
     # Step: for each lv, detach+rename*2+attach
     self.lu.LogStep(4, steps_total, "Changing drbd configuration")
-    for dev, old_lvs, new_lvs in iv_names.itervalues():
+    for dev, old_lvs, new_lvs in iv_names.values():
       self.lu.LogInfo("Detaching %s drbd from local storage", dev.iv_name)
 
       result = self.rpc.call_blockdev_removechildren(self.target_node_uuid,
@@ -2766,14 +2766,14 @@ class TLReplaceDisks(Tasklet):
     cstep = itertools.count(5)
 
     if self.early_release:
-      self.lu.LogStep(cstep.next(), steps_total, "Removing old storage")
+      self.lu.LogStep(next(cstep), steps_total, "Removing old storage")
       self._RemoveOldStorage(self.target_node_uuid, iv_names)
       # TODO: Check if releasing locks early still makes sense
       ReleaseLocks(self.lu, locking.LEVEL_NODE_RES)
     else:
       # Release all resource locks except those used by the instance
       ReleaseLocks(self.lu, locking.LEVEL_NODE_RES,
-                   keep=self.node_secondary_ip.keys())
+                   keep=list(self.node_secondary_ip.keys()))
 
     # Release all node locks while waiting for sync
     ReleaseLocks(self.lu, locking.LEVEL_NODE)
@@ -2784,7 +2784,7 @@ class TLReplaceDisks(Tasklet):
     # Wait for sync
     # This can fail as the old devices are degraded and _WaitForSync
     # does a combined result over all disks, so we don't check its return value
-    self.lu.LogStep(cstep.next(), steps_total, "Sync devices")
+    self.lu.LogStep(next(cstep), steps_total, "Sync devices")
     WaitForSync(self.lu, self.instance)
 
     # Check all devices manually
@@ -2792,7 +2792,7 @@ class TLReplaceDisks(Tasklet):
 
     # Step: remove old storage
     if not self.early_release:
-      self.lu.LogStep(cstep.next(), steps_total, "Removing old storage")
+      self.lu.LogStep(next(cstep), steps_total, "Removing old storage")
       self._RemoveOldStorage(self.target_node_uuid, iv_names)
 
   def _UpdateDisksSecondary(self, iv_names, feedback_fn):
@@ -2805,7 +2805,7 @@ class TLReplaceDisks(Tasklet):
         the OpCode
     """
     self.lu.LogInfo("Updating instance configuration")
-    for dev, _, new_logical_id in iv_names.itervalues():
+    for dev, _, new_logical_id in iv_names.values():
       dev.logical_id = new_logical_id
       self.cfg.Update(dev, feedback_fn)
       self.cfg.SetDiskNodes(dev.uuid, [self.instance.primary_node,
@@ -2884,7 +2884,7 @@ class TLReplaceDisks(Tasklet):
           _CreateBlockDevInner(self.lu, self.new_node_uuid, self.instance,
                                new_lv, True, GetInstanceInfoText(self.instance),
                                False, excl_stor)
-        except errors.DeviceCreationError, e:
+        except errors.DeviceCreationError as e:
           raise errors.OpExecError("Can't create block device: %s" % e.message)
 
     # Step 4: dbrd minors and drbd setups changes
@@ -2976,7 +2976,7 @@ class TLReplaceDisks(Tasklet):
                                             self.new_node_uuid],
                                            (inst_disks, self.instance),
                                            False)
-    for to_node, to_result in result.items():
+    for to_node, to_result in list(result.items()):
       msg = to_result.fail_msg
       if msg:
         raise errors.OpExecError(
@@ -2987,14 +2987,14 @@ class TLReplaceDisks(Tasklet):
     cstep = itertools.count(5)
 
     if self.early_release:
-      self.lu.LogStep(cstep.next(), steps_total, "Removing old storage")
+      self.lu.LogStep(next(cstep), steps_total, "Removing old storage")
       self._RemoveOldStorage(self.target_node_uuid, iv_names)
       # TODO: Check if releasing locks early still makes sense
       ReleaseLocks(self.lu, locking.LEVEL_NODE_RES)
     else:
       # Release all resource locks except those used by the instance
       ReleaseLocks(self.lu, locking.LEVEL_NODE_RES,
-                   keep=self.node_secondary_ip.keys())
+                   keep=list(self.node_secondary_ip.keys()))
 
     # TODO: Can the instance lock be downgraded here? Take the optional disk
     # shutdown in the caller into consideration.
@@ -3002,7 +3002,7 @@ class TLReplaceDisks(Tasklet):
     # Wait for sync
     # This can fail as the old devices are degraded and _WaitForSync
     # does a combined result over all disks, so we don't check its return value
-    self.lu.LogStep(cstep.next(), steps_total, "Sync devices")
+    self.lu.LogStep(next(cstep), steps_total, "Sync devices")
     WaitForSync(self.lu, self.instance)
 
     # Check all devices manually
@@ -3010,7 +3010,7 @@ class TLReplaceDisks(Tasklet):
 
     # Step: remove old storage
     if not self.early_release:
-      self.lu.LogStep(cstep.next(), steps_total, "Removing old storage")
+      self.lu.LogStep(next(cstep), steps_total, "Removing old storage")
       self._RemoveOldStorage(self.target_node_uuid, iv_names)
 
 

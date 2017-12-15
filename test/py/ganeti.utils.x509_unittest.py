@@ -42,7 +42,7 @@ from ganeti import constants
 from ganeti import utils
 from ganeti import errors
 
-import testutils
+from . import testutils
 
 
 class TestParseAsn1Generalizedtime(unittest.TestCase):
@@ -314,13 +314,13 @@ class TestGenerateX509Certs(unittest.TestCase):
 
       key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                            key_pem)
-      self.assert_(key.bits() >= 1024)
+      self.assertTrue(key.bits() >= 1024)
       self.assertEqual(key.bits(), constants.RSA_KEY_BITS)
       self.assertEqual(key.type(), OpenSSL.crypto.TYPE_RSA)
 
       x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                              cert_pem)
-      self.failIf(x509.has_expired())
+      self.assertFalse(x509.has_expired())
       self.assertEqual(x509.get_issuer().CN, common_name)
       self.assertEqual(x509.get_subject().CN, common_name)
       self.assertEqual(x509.get_pubkey().bits(), constants.RSA_KEY_BITS)
@@ -332,8 +332,8 @@ class TestGenerateX509Certs(unittest.TestCase):
 
     cert1 = utils.ReadFile(cert1_filename)
 
-    self.assert_(self._checkRsaPrivateKey(cert1))
-    self.assert_(self._checkCertificate(cert1))
+    self.assertTrue(self._checkRsaPrivateKey(cert1))
+    self.assertTrue(self._checkCertificate(cert1))
 
   def _checkKeyMatchesCert(self, key, cert):
     ctx = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
@@ -388,7 +388,7 @@ class TestCheckNodeCertificate(testutils.GanetiTestCase):
 
     try:
       utils.CheckNodeCertificate(cert, _noded_cert_file=node_cert)
-    except errors.GenericError, err:
+    except errors.GenericError as err:
       self.assertEqual(str(err),
                        "Given cluster certificate does not match local key")
     else:
@@ -447,7 +447,7 @@ class TestCheckNodeCertificate(testutils.GanetiTestCase):
 
     try:
       utils.CheckNodeCertificate(cert1, _noded_cert_file=tmpfile)
-    except errors.X509CertError, err:
+    except errors.X509CertError as err:
       self.assertEqual(err.args,
                        (tmpfile, "Certificate does not match with private key"))
     else:

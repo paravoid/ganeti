@@ -47,7 +47,7 @@ import yaml
 
 try:
   import functools
-except ImportError, err:
+except ImportError as err:
   raise ImportError("Python 2.5 or higher is required: %s" % err)
 
 from ganeti import utils
@@ -57,11 +57,11 @@ from ganeti import ht
 from ganeti import pathutils
 from ganeti import vcluster
 
-import colors
-import qa_config
-import qa_error
+from . import colors
+from . import qa_config
+from . import qa_error
 
-from qa_logging import FormatInfo
+from .qa_logging import FormatInfo
 
 
 _MULTIPLEXERS = {}
@@ -77,10 +77,10 @@ _RETRIES = 3
 
 
 (INST_DOWN,
- INST_UP) = range(500, 502)
+ INST_UP) = list(range(500, 502))
 
 (FIRST_ARG,
- RETURN_VALUE) = range(1000, 1002)
+ RETURN_VALUE) = list(range(1000, 1002))
 
 
 def _RaiseWithInfo(msg, error_desc):
@@ -133,7 +133,7 @@ def _GetName(entity, fn):
   @param fn: Function retrieving name from entity
 
   """
-  if isinstance(entity, basestring):
+  if isinstance(entity, str):
     result = entity
   else:
     result = fn(entity)
@@ -166,13 +166,13 @@ def _PrintCommandOutput(stdout, stderr):
   if stdout:
     stdout_clean = stdout.rstrip('\n')
     if stderr:
-      print "Stdout was:\n%s" % stdout_clean
+      print("Stdout was:\n%s" % stdout_clean)
     else:
-      print stdout_clean
+      print(stdout_clean)
 
   if stderr:
-    print "Stderr was:"
-    print >> sys.stderr, stderr.rstrip('\n')
+    print("Stderr was:")
+    print(stderr.rstrip('\n'), file=sys.stderr)
 
 
 def AssertCommand(cmd, fail=False, node=None, log_cmd=True, forward_agent=True,
@@ -205,7 +205,7 @@ def AssertCommand(cmd, fail=False, node=None, log_cmd=True, forward_agent=True,
 
   nodename = _GetName(node, operator.attrgetter("primary"))
 
-  if isinstance(cmd, basestring):
+  if isinstance(cmd, str):
     cmdstr = cmd
   else:
     cmdstr = utils.ShellQuoteArgs(cmd)
@@ -343,8 +343,8 @@ def StartLocalCommand(cmd, _nolog_opts=False, log_cmd=True, **kwargs):
       pcmd = [i for i in cmd if not i.startswith("-")]
     else:
       pcmd = cmd
-    print "%s %s" % (colors.colorize("Command:", colors.CYAN),
-                     utils.ShellQuoteArgs(pcmd))
+    print("%s %s" % (colors.colorize("Command:", colors.CYAN),
+                     utils.ShellQuoteArgs(pcmd)))
   return subprocess.Popen(cmd, shell=False, **kwargs)
 
 
@@ -371,7 +371,7 @@ def StartMultiplexer(node):
   sname = tempfile.mktemp(prefix="ganeti-qa-multiplexer.")
   utils.RemoveFile(sname)
   opts = ["-N", "-oControlPath=%s" % sname, "-oControlMaster=yes"]
-  print "Created socket at %s" % sname
+  print("Created socket at %s" % sname)
   child = StartLocalCommand(GetSSHCommand(node, None, opts=opts))
   _MULTIPLEXERS[node] = (sname, child)
 
@@ -380,7 +380,7 @@ def CloseMultiplexers():
   """Closes all current multiplexers and cleans up.
 
   """
-  for node in _MULTIPLEXERS.keys():
+  for node in list(_MULTIPLEXERS.keys()):
     (sname, child) = _MULTIPLEXERS.pop(node)
     utils.KillProcess(child.pid, timeout=10, waitpid=True)
     utils.RemoveFile(sname)
@@ -459,7 +459,7 @@ def UploadFile(node, src):
 
   """
   # Make sure nobody else has access to it while preserving local permissions
-  mode = os.stat(src).st_mode & 0700
+  mode = os.stat(src).st_mode & 0o700
 
   cmd = ('tmp=$(mktemp --tmpdir gnt.XXXXXX) && '
          'chmod %o "${tmp}" && '
@@ -479,7 +479,7 @@ def UploadFile(node, src):
     f.close()
 
 
-def UploadData(node, data, mode=0600, filename=None):
+def UploadData(node, data, mode=0o600, filename=None):
   """Uploads data to a node and returns the filename.
 
   Caller needs to remove the returned file on the node when it's not needed
@@ -523,7 +523,7 @@ def BackupFile(node, path):
   # Return temporary filename
   result = GetCommandOutput(node, cmd).strip()
 
-  print "Backup filename: %s" % result
+  print("Backup filename: %s" % result)
 
   return result
 
@@ -701,7 +701,7 @@ def AddToEtcHosts(hostnames):
 
   """
   master = qa_config.GetMasterNode()
-  tmp_hosts = UploadData(master.primary, "", mode=0644)
+  tmp_hosts = UploadData(master.primary, "", mode=0o644)
 
   data = []
   for localhost in ("::1", "127.0.0.1"):
@@ -726,7 +726,7 @@ def RemoveFromEtcHosts(hostnames):
 
   """
   master = qa_config.GetMasterNode()
-  tmp_hosts = UploadData(master.primary, "", mode=0644)
+  tmp_hosts = UploadData(master.primary, "", mode=0o644)
   quoted_tmp_hosts = utils.ShellQuote(tmp_hosts)
 
   sed_data = " ".join(hostnames)
@@ -763,8 +763,8 @@ def RunInstanceCheck(instance, running):
     running_shellval = ""
     running_text = "not "
 
-  print FormatInfo("Checking if instance '%s' is %srunning" %
-                   (instance_name, running_text))
+  print(FormatInfo("Checking if instance '%s' is %srunning" %
+                   (instance_name, running_text)))
 
   args = [script, instance_name]
   env = {
@@ -876,7 +876,7 @@ def MakeNodePath(node, path):
   """
   (_, basedir) = qa_config.GetVclusterSettings()
 
-  if isinstance(node, basestring):
+  if isinstance(node, str):
     name = node
   else:
     name = node.primary
@@ -891,7 +891,7 @@ def MakeNodePath(node, path):
 def _GetParameterOptions(specs):
   """Helper to build policy options."""
   values = ["%s=%s" % (par, val)
-            for (par, val) in specs.items()]
+            for (par, val) in list(specs.items())]
   return ",".join(values)
 
 
@@ -938,10 +938,10 @@ def TestSetISpecs(new_specs=None, diff_specs=None, get_policy_fn=None,
                   len(diff_specs[constants.ISPECS_MINMAX]))
       for (new_minmax, diff_minmax) in zip(new_specs[constants.ISPECS_MINMAX],
                                            diff_specs[constants.ISPECS_MINMAX]):
-        for (key, parvals) in diff_minmax.items():
-          for (par, val) in parvals.items():
+        for (key, parvals) in list(diff_minmax.items()):
+          for (par, val) in list(parvals.items()):
             new_minmax[key][par] = val
-    for (par, val) in diff_specs.get(constants.ISPECS_STD, {}).items():
+    for (par, val) in list(diff_specs.get(constants.ISPECS_STD, {}).items()):
       new_specs[constants.ISPECS_STD][par] = val
 
   if new_specs:
@@ -995,7 +995,7 @@ def ParseIPolicy(policy):
   """
   ret_specs = {}
   ret_policy = {}
-  for (key, val) in policy.items():
+  for (key, val) in list(policy.items()):
     if key == "bounds specs":
       ret_specs[constants.ISPECS_MINMAX] = []
       for minmax in val:

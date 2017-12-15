@@ -43,7 +43,7 @@ from ganeti import serializer
 from ganeti import utils
 from ganeti.tools import common
 
-import testutils
+from . import testutils
 
 
 class TestGenerateClientCert(unittest.TestCase):
@@ -206,7 +206,7 @@ class TestVerifyCertificateStrong(testutils.GanetiTestCase):
     try:
       common._VerifyCertificateStrong(cert1_pem + key2_pem, self.MyException,
                                       _check_fn=NotImplemented)
-    except self.MyException, err:
+    except self.MyException as err:
       self.assertTrue("not signed with given key" in str(err))
     else:
       self.fail("Exception was not raised")

@@ -317,7 +317,7 @@ class _StaticResolver(object):
 
     """
     assert len(hosts) == len(self._addresses)
-    return zip(hosts, self._addresses, hosts)
+    return list(zip(hosts, self._addresses, hosts))
 
 
 def _CheckConfigNode(node_uuid_or_name, node, accept_offline_node):
@@ -393,9 +393,9 @@ class _RpcProcessor(object):
 
     assert isinstance(body, dict)
     assert len(body) == len(hosts)
-    assert compat.all(isinstance(v, str) for v in body.values())
-    assert frozenset(h[2] for h in hosts) == frozenset(body.keys()), \
-        "%s != %s" % (hosts, body.keys())
+    assert compat.all(isinstance(v, str) for v in list(body.values()))
+    assert frozenset(h[2] for h in hosts) == frozenset(list(body.keys())), \
+        "%s != %s" % (hosts, list(body.keys()))
 
     for (name, ip, original_name) in hosts:
       if ip is _OFFLINE:
@@ -420,7 +420,7 @@ class _RpcProcessor(object):
     """Combines pre-computed results for offline hosts with actual call results.
 
     """
-    for name, req in requests.items():
+    for name, req in list(requests.items()):
       if req.success and req.resp_status_code == http.HTTP_OK:
         host_result = RpcResult(data=serializer.LoadJson(req.resp_body),
                                 node=name, call=procedure)
@@ -465,7 +465,7 @@ class _RpcProcessor(object):
       self._PrepareRequests(self._resolver(nodes, resolver_opts), self._port,
                             procedure, body, read_timeout)
 
-    _req_process_fn(requests.values(), lock_monitor_cb=self._lock_monitor_cb)
+    _req_process_fn(list(requests.values()), lock_monitor_cb=self._lock_monitor_cb)
 
     assert not frozenset(results).intersection(requests)
 
@@ -485,10 +485,11 @@ class _RpcClientBase(object):
     self._encoder = compat.partial(self._EncodeArg, encoder_fn)
 
   @staticmethod
-  def _EncodeArg(encoder_fn, node, (argkind, value)):
+  def _EncodeArg(encoder_fn, node, xxx_todo_changeme):
     """Encode argument.
 
     """
+    (argkind, value) = xxx_todo_changeme
     if argkind is None:
       return value
     else:
@@ -533,7 +534,7 @@ class _RpcClientBase(object):
                         req_resolver_opts)
 
     if postproc_fn:
-      return dict((k, postproc_fn(v)) for (k, v) in result.items())
+      return dict((k, postproc_fn(v)) for (k, v) in list(result.items()))
     else:
       return result
 
@@ -655,10 +656,11 @@ def MakeLegacyNodeInfo(data, disk_template):
   return ret
 
 
-def _AnnotateDParamsDRBD(disk, (drbd_params, data_params, meta_params)):
+def _AnnotateDParamsDRBD(disk, xxx_todo_changeme7):
   """Annotates just DRBD disks layouts.
 
   """
+  (drbd_params, data_params, meta_params) = xxx_todo_changeme7
   assert disk.dev_type == constants.DT_DRBD8
 
   disk.params = objects.FillDict(drbd_params, disk.params)
@@ -669,10 +671,11 @@ def _AnnotateDParamsDRBD(disk, (drbd_params, data_params, meta_params)):
   return disk
 
 
-def _AnnotateDParamsGeneric(disk, (params, )):
+def _AnnotateDParamsGeneric(disk, xxx_todo_changeme8):
   """Generic disk parameter annotation routine.
 
   """
+  (params, ) = xxx_todo_changeme8
   assert disk.dev_type != constants.DT_DRBD8
 
   disk.params = objects.FillDict(params, disk.params)
@@ -751,8 +754,8 @@ def GetExclusiveStorageForNodes(cfg, node_uuids):
 
   """
   getflag = lambda n: _GetExclusiveStorageFlag(cfg, n)
-  flags = map(getflag, node_uuids)
-  return dict(zip(node_uuids, flags))
+  flags = list(map(getflag, node_uuids))
+  return dict(list(zip(node_uuids, flags)))
 
 
 def PrepareStorageUnitsForNodes(cfg, storage_units, node_uuids):
@@ -777,8 +780,8 @@ def PrepareStorageUnitsForNodes(cfg, storage_units, node_uuids):
   """
   getunit = lambda n: _AddExclusiveStorageFlagToLvmStorageUnits(
       storage_units, _GetExclusiveStorageFlag(cfg, n))
-  flags = map(getunit, node_uuids)
-  return dict(zip(node_uuids, flags))
+  flags = list(map(getunit, node_uuids))
+  return dict(list(zip(node_uuids, flags)))
 
 
 #: Generic encoders
@@ -860,7 +863,8 @@ class RpcRunner(_RpcClientBase,
         n.netinfo = objects.Network.ToDict(nobj)
     return n.ToDict()
 
-  def _DeviceDict(self, _, (device, instance)):
+  def _DeviceDict(self, _, xxx_todo_changeme1):
+    (device, instance) = xxx_todo_changeme1
     if isinstance(device, objects.NIC):
       return self._NicDict(None, device)
     elif isinstance(device, objects.Disk):
@@ -912,22 +916,25 @@ class RpcRunner(_RpcClientBase,
           nic["netinfo"] = objects.Network.ToDict(nobj)
     return idict
 
-  def _InstDictHvpBepDp(self, node, (instance, hvp, bep)):
+  def _InstDictHvpBepDp(self, node, xxx_todo_changeme2):
     """Wrapper for L{_InstDict}.
 
     """
+    (instance, hvp, bep) = xxx_todo_changeme2
     return self._InstDict(node, instance, hvp=hvp, bep=bep)
 
-  def _InstDictOspDp(self, node, (instance, osparams)):
+  def _InstDictOspDp(self, node, xxx_todo_changeme3):
     """Wrapper for L{_InstDict}.
 
     """
+    (instance, osparams) = xxx_todo_changeme3
     return self._InstDict(node, instance, osp=osparams)
 
-  def _DisksDictDP(self, node, (disks, instance)):
+  def _DisksDictDP(self, node, xxx_todo_changeme4):
     """Wrapper for L{AnnotateDiskParams}.
 
     """
+    (disks, instance) = xxx_todo_changeme4
     diskparams = self._cfg.GetInstanceDiskParams(instance)
     ret = []
     for disk in AnnotateDiskParams(disks, diskparams):
@@ -949,10 +956,11 @@ class RpcRunner(_RpcClientBase,
     return [disk for disk_inst in disks_insts
             for disk in self._DisksDictDP(node, disk_inst)]
 
-  def _SingleDiskDictDP(self, node, (disk, instance)):
+  def _SingleDiskDictDP(self, node, xxx_todo_changeme5):
     """Wrapper for L{AnnotateDiskParams}.
 
     """
+    (disk, instance) = xxx_todo_changeme5
     anno_disk = self._DisksDictDP(node, ([disk], instance))[0]
     return anno_disk
 
@@ -961,12 +969,13 @@ class RpcRunner(_RpcClientBase,
 
     """
     return dict((name, [self._SingleDiskDictDP(node, disk) for disk in disks])
-                for name, disks in value.items())
+                for name, disks in list(value.items()))
 
-  def _EncodeImportExportIO(self, node, (ieio, ieioargs)):
+  def _EncodeImportExportIO(self, node, xxx_todo_changeme6):
     """Encodes import/export I/O information.
 
     """
+    (ieio, ieioargs) = xxx_todo_changeme6
     if ieio == constants.IEIO_RAW_DISK:
       assert len(ieioargs) == 2
       return (ieio, (self._SingleDiskDictDP(node, ieioargs), ))

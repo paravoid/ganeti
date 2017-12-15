@@ -157,7 +157,7 @@ class GanetiTestCase(unittest.TestCase):
       except EnvironmentError:
         pass
 
-    for patch in self.patches.values():
+    for patch in list(self.patches.values()):
       patch.stop()
 
     self.patches = {}
@@ -267,7 +267,7 @@ def UnifyValueType(data):
 
   elif isinstance(data, dict):
     return dict([(UnifyValueType(key), UnifyValueType(value))
-                 for (key, value) in data.iteritems()])
+                 for (key, value) in data.items()])
 
   return data
 

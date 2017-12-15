@@ -36,8 +36,8 @@ import mock
 import os
 import shutil
 import tempfile
-import testutils
-import testutils_ssh
+from . import testutils
+from . import testutils_ssh
 import unittest
 
 from ganeti import backend
@@ -49,7 +49,7 @@ from ganeti import objects
 from ganeti import serializer
 from ganeti import ssh
 from ganeti import utils
-from testutils.config_mock import ConfigMock
+from .testutils.config_mock import ConfigMock
 
 
 class TestX509Certificates(unittest.TestCase):
@@ -65,7 +65,7 @@ class TestX509Certificates(unittest.TestCase):
     self.assertEqual(utils.ReadFile(os.path.join(self.tmpdir, name,
                                                  backend._X509_CERT_FILE)),
                      cert_pem)
-    self.assert_(0 < os.path.getsize(os.path.join(self.tmpdir, name,
+    self.assertTrue(0 < os.path.getsize(os.path.join(self.tmpdir, name,
                                                   backend._X509_KEY_FILE)))
 
     (name2, cert_pem2) = \
@@ -137,9 +137,9 @@ class TestNodeVerify(testutils.GanetiTestCase):
     local_data = (my_name,constants.IP4_ADDRESS_LOCALHOST, [my_name])
     result = backend.VerifyNode({constants.NV_MASTERIP: local_data},
                                 None, {})
-    self.failUnless(constants.NV_MASTERIP in result,
+    self.assertTrue(constants.NV_MASTERIP in result,
                     "Master IP data not returned")
-    self.failUnless(result[constants.NV_MASTERIP],
+    self.assertTrue(result[constants.NV_MASTERIP],
                     "Cannot reach localhost")
 
   def testMasterIPSkipTest(self):
@@ -148,9 +148,9 @@ class TestNodeVerify(testutils.GanetiTestCase):
                   constants.IP4_ADDRESS_LOCALHOST, [])
     result = backend.VerifyNode({constants.NV_MASTERIP: local_data},
                                 None, {})
-    self.failUnless(constants.NV_MASTERIP in result,
+    self.assertTrue(constants.NV_MASTERIP in result,
                     "Master IP data not returned")
-    self.failUnless(result[constants.NV_MASTERIP] == None,
+    self.assertTrue(result[constants.NV_MASTERIP] == None,
                     "Test ran by non master candidate")
 
   def testMasterIPUnreachable(self):
@@ -162,9 +162,9 @@ class TestNodeVerify(testutils.GanetiTestCase):
     netutils.TcpPing = lambda a, b, source=None: False
     result = backend.VerifyNode({constants.NV_MASTERIP: bad_data},
                                 None, {})
-    self.failUnless(constants.NV_MASTERIP in result,
+    self.assertTrue(constants.NV_MASTERIP in result,
                     "Master IP data not returned")
-    self.failIf(result[constants.NV_MASTERIP],
+    self.assertFalse(result[constants.NV_MASTERIP],
                 "Result from netutils.TcpPing corrupted")
 
   def testVerifyNodeNetTestMissingSelf(self):
@@ -173,9 +173,9 @@ class TestNodeVerify(testutils.GanetiTestCase):
     result = backend.VerifyNode({constants.NV_NODENETTEST: local_data},
                                 None, {})
 
-    self.failUnless(constants.NV_NODENETTEST in result,
+    self.assertTrue(constants.NV_NODENETTEST in result,
                     "NodeNetTest data not returned")
-    self.failUnless(my_name in result[constants.NV_NODENETTEST],
+    self.assertTrue(my_name in result[constants.NV_NODENETTEST],
                     "Missing failure in net test")
 
   def testVerifyNodeNetTest(self):
@@ -187,18 +187,18 @@ class TestNodeVerify(testutils.GanetiTestCase):
     result = backend.VerifyNode({constants.NV_NODENETTEST: local_data},
                                 None, {})
 
-    self.failUnless(constants.NV_NODENETTEST in result,
+    self.assertTrue(constants.NV_NODENETTEST in result,
                     "NodeNetTest data not returned")
-    self.failUnless(result[constants.NV_NODENETTEST] == {},
+    self.assertTrue(result[constants.NV_NODENETTEST] == {},
                     "NodeNetTest failed")
 
   def testVerifyNodeNetSkipTest(self):
     local_data = ([('n1.test.com', "any", "any")], [])
     result = backend.VerifyNode({constants.NV_NODENETTEST: local_data},
                                 None, {})
-    self.failUnless(constants.NV_NODENETTEST in result,
+    self.assertTrue(constants.NV_NODENETTEST in result,
                     "NodeNetTest data not returned")
-    self.failUnless(result[constants.NV_NODENETTEST] == {},
+    self.assertTrue(result[constants.NV_NODENETTEST] == {},
                     "Test ran by non master candidate")
 
   def testVerifyHvparams(self):
@@ -295,7 +295,7 @@ class TestVerifyRestrictedCmdDirectory(unittest.TestCase):
     tmpname = utils.PathJoin(self.tmpdir, "foobar")
     os.mkdir(tmpname)
 
-    for mode in [0777, 0706, 0760, 0722]:
+    for mode in [0o777, 0o706, 0o760, 0o722]:
       os.chmod(tmpname, mode)
       self.assertTrue(os.path.isdir(tmpname))
       (status, msg) = \
@@ -316,7 +316,7 @@ class TestVerifyRestrictedCmdDirectory(unittest.TestCase):
   def testNormal(self):
     tmpname = utils.PathJoin(self.tmpdir, "foobar")
     os.mkdir(tmpname)
-    os.chmod(tmpname, 0755)
+    os.chmod(tmpname, 0o755)
     self.assertTrue(os.path.isdir(tmpname))
     (status, msg) = \
       backend._VerifyRestrictedCmdDirectory(tmpname,
@@ -352,7 +352,7 @@ class TestVerifyRestrictedCmd(unittest.TestCase):
 
   def testExecutable(self):
     tmpname = utils.PathJoin(self.tmpdir, "cmdname")
-    utils.WriteFile(tmpname, data="empty\n", mode=0700)
+    utils.WriteFile(tmpname, data="empty\n", mode=0o700)
     (status, executable) = \
       backend._VerifyRestrictedCmd(self.tmpdir, "cmdname",
                                    _owner=_DefRestrictedCmdOwner())
@@ -460,7 +460,7 @@ class TestRunRestrictedCmd(unittest.TestCase):
                                _prepare_fn=NotImplemented,
                                _runcmd_fn=NotImplemented,
                                _enabled=True)
-    except backend.RPCFail, err:
+    except backend.RPCFail as err:
       assert str(err) == _GenericRestrictedCmdError("test22717"), \
              "Did not fail with generic error message"
       result = True
@@ -496,7 +496,7 @@ class TestRunRestrictedCmd(unittest.TestCase):
                                _path=NotImplemented, _runcmd_fn=NotImplemented,
                                _sleep_fn=sleep_fn, _prepare_fn=prepare_fn,
                                _enabled=True)
-    except backend.RPCFail, err:
+    except backend.RPCFail as err:
       self.assertEqual(str(err), _GenericRestrictedCmdError("test23122"))
     else:
       self.fail("Didn't fail")
@@ -521,7 +521,7 @@ class TestRunRestrictedCmd(unittest.TestCase):
                                _path=NotImplemented, _runcmd_fn=NotImplemented,
                                _sleep_fn=sleep_fn, _prepare_fn=prepare_fn,
                                _enabled=True)
-    except backend.RPCFail, err:
+    except backend.RPCFail as err:
       self.assertEqual(str(err), _GenericRestrictedCmdError("test29327"))
     else:
       self.fail("Didn't fail")
@@ -572,7 +572,7 @@ class TestRunRestrictedCmd(unittest.TestCase):
                                _path=self.tmpdir, _runcmd_fn=runcmd_fn,
                                _sleep_fn=sleep_fn, _prepare_fn=prepare_fn,
                                _enabled=True)
-    except backend.RPCFail, err:
+    except backend.RPCFail as err:
       self.assertTrue(str(err).startswith("Restricted command 'test3079'"
                                           " failed:"))
       self.assertTrue("stderr406328567" in str(err),
@@ -627,7 +627,7 @@ class TestRunRestrictedCmd(unittest.TestCase):
                                _prepare_fn=NotImplemented,
                                _runcmd_fn=NotImplemented,
                                _enabled=False)
-    except backend.RPCFail, err:
+    except backend.RPCFail as err:
       self.assertEqual(str(err),
                        "Restricted commands disabled at configure time")
     else:
@@ -653,7 +653,7 @@ class TestSetWatcherPause(unittest.TestCase):
 
       try:
         backend.SetWatcherPause(i, _filename=self.filename)
-      except backend.RPCFail, err:
+      except backend.RPCFail as err:
         self.assertEqual(str(err), "Duration must be numeric")
       else:
         self.fail("Did not raise exception")
@@ -666,7 +666,7 @@ class TestSetWatcherPause(unittest.TestCase):
     for i in range(10):
       backend.SetWatcherPause(i, _filename=self.filename)
       self.assertEqual(utils.ReadFile(self.filename), "%s\n" % i)
-      self.assertEqual(os.stat(self.filename).st_mode & 0777, 0644)
+      self.assertEqual(os.stat(self.filename).st_mode & 0o777, 0o644)
 
 
 class TestGetBlockDevSymlinkPath(unittest.TestCase):
@@ -1111,8 +1111,8 @@ class TestAddRemoveGenerateNodeSshKey(testutils.GanetiTestCase):
         run_cmd_fn=self._run_cmd_mock)
 
     calls_per_node = self._GetCallsPerNode()
-    for node, calls in calls_per_node.items():
-      self.assertEquals(node, test_node_name)
+    for node, calls in list(calls_per_node.items()):
+      self.assertEqual(node, test_node_name)
       for call in calls:
         self.assertTrue(constants.SSHS_GENERATE in call)
 
@@ -2096,7 +2096,7 @@ class TestOSEnvironment(unittest.TestCase):
 
   def testParamPresence(self):
     env = self._CreateEnv()
-    env_keys = env.keys()
+    env_keys = list(env.keys())
     self.assertTrue("OSP_PUBLIC_PARAM" in env)
     self.assertTrue("OSP_PRIVATE_PARAM" in env)
     self.assertTrue("OSP_ANOTHER_PRIVATE_PARAM" in env)

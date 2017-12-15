@@ -31,7 +31,7 @@
 
 """
 
-import BaseHTTPServer
+import http.server
 import cgi
 import logging
 import os
@@ -248,14 +248,14 @@ def _HandleServerRequestInner(handler, req_msg, reader):
     except (http.HttpException, errors.RapiTestResult,
             KeyboardInterrupt, SystemExit):
       raise
-    except Exception, err:
+    except Exception as err:
       logging.exception("Caught exception")
       raise http.HttpInternalServerError(message=str(err))
     except:
       logging.exception("Unknown exception")
       raise http.HttpInternalServerError(message="Unknown error")
 
-    if not isinstance(result, basestring):
+    if not isinstance(result, str):
       raise http.HttpError("Handler function didn't return string type")
 
     return (http.HTTP_OK, handler_context.resp_headers, result)
@@ -271,7 +271,7 @@ class HttpResponder(object):
   # Most web servers default to HTTP 0.9, i.e. don't send a status line.
   default_request_version = http.HTTP_0_9
 
-  responses = BaseHTTPServer.BaseHTTPRequestHandler.responses
+  responses = http.server.BaseHTTPRequestHandler.responses
 
   def __init__(self, handler):
     """Initializes this class.
@@ -311,7 +311,7 @@ class HttpResponder(object):
       (response_msg.start_line.code, response_msg.headers,
        response_msg.body) = \
         _HandleServerRequestInner(self._handler, request_msg, req_msg_reader)
-    except http.HttpException, err:
+    except http.HttpException as err:
       self._SetError(self.responses, self._handler, response_msg, err)
     else:
       # Only wait for client to close if we didn't have any exception.
@@ -457,7 +457,7 @@ class HttpServerRequestExecutor(object):
       reader = _HttpClientToServerMessageReader(sock, msg, timeout)
     except http.HttpSocketTimeout:
       raise http.HttpError("Timeout while reading request")
-    except socket.error, err:
+    except socket.error as err:
       raise http.HttpError("Error reading request: %s" % err)
 
     return (msg, reader)
@@ -471,7 +471,7 @@ class HttpServerRequestExecutor(object):
       _HttpServerToClientMessageWriter(sock, req_msg, msg, timeout)
     except http.HttpSocketTimeout:
       raise http.HttpError("Timeout while sending response")
-    except socket.error, err:
+    except socket.error as err:
       raise http.HttpError("Error sending response: %s" % err)
 
 

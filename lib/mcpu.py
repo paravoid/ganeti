@@ -123,7 +123,7 @@ class LockAttemptTimeoutStrategy(object):
 
     """
     try:
-      timeout = self._timeouts.next()
+      timeout = next(self._timeouts)
     except StopIteration:
       # No more timeouts, do blocking acquire
       timeout = None
@@ -193,7 +193,7 @@ def _ComputeDispatchTable():
 
   """
   return dict((op, getattr(cmdlib, _LUNameForOpName(op.__name__)))
-              for op in opcodes.OP_MAPPING.values()
+              for op in list(opcodes.OP_MAPPING.values())
               if op.WITH_LU)
 
 
@@ -269,7 +269,7 @@ def _LockList(names):
   """
   if names == locking.ALL_SET:
     return names
-  elif isinstance(names, basestring):
+  elif isinstance(names, str):
     return [names]
   else:
     return list(names)
@@ -545,7 +545,7 @@ class Processor(object):
 
       try:
         result = self._ExecLU(lu)
-      except errors.OpPrereqError, err:
+      except errors.OpPrereqError as err:
         if len(err.args) < 2 or err.args[1] != errors.ECODE_TEMP_NORES:
           raise
 
@@ -558,7 +558,7 @@ class Processor(object):
           logging.debug("LU does not know how to retry.")
           raise err
         raise LockAcquireTimeout()
-      except AssertionError, err:
+      except AssertionError as err:
         # this is a bit ugly, as we don't know from which phase
         # (prereq, exec) this comes; but it's better than an exception
         # with no information

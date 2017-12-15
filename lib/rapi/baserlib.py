@@ -125,7 +125,7 @@ def BuildUriList(ids, uri_format, uri_fields=("name", "uri")):
   # unittests.
   ids.sort()
 
-  return map(_MapId, ids)
+  return list(map(_MapId, ids))
 
 
 def MapFields(names, data):
@@ -141,7 +141,7 @@ def MapFields(names, data):
   """
   if len(names) != len(data):
     raise AttributeError("Names and data must have the same length")
-  return dict(zip(names, data))
+  return dict(list(zip(names, data)))
 
 
 def MapBulkFields(itemslist, fields):
@@ -185,7 +185,7 @@ def FillOpcode(opcls, body, static, rename=None):
     params = body.copy()
 
   if rename:
-    for old, new in rename.items():
+    for old, new in list(rename.items()):
       if new in params and old in params:
         raise http.HttpBadRequest("Parameter '%s' was renamed to '%s', but"
                                   " both are specified" %
@@ -203,12 +203,12 @@ def FillOpcode(opcls, body, static, rename=None):
     params.update(static)
 
   # Convert keys to strings (simplejson decodes them as unicode)
-  params = dict((str(key), value) for (key, value) in params.items())
+  params = dict((str(key), value) for (key, value) in list(params.items()))
 
   try:
     op = opcls(**params)
     op.Validate(False)
-  except (errors.OpPrereqError, TypeError), err:
+  except (errors.OpPrereqError, TypeError) as err:
     raise http.HttpBadRequest("Invalid body parameters: %s" % err)
 
   return op
@@ -220,7 +220,7 @@ def HandleItemQueryErrors(fn, *args, **kwargs):
   """
   try:
     result = fn(*args, **kwargs)
-  except errors.OpPrereqError, err:
+  except errors.OpPrereqError as err:
     if len(err.args) == 2 and err.args[1] == errors.ECODE_NOENT:
       raise http.HttpNotFound()
 
@@ -405,7 +405,7 @@ class ResourceBase(object):
     # Could be a function, pylint: disable=R0201
     try:
       return self._client_cls()
-    except rpcerr.NoMasterError, err:
+    except rpcerr.NoMasterError as err:
       raise http.HttpBadGateway("Can't connect to master daemon: %s" % err)
     except rpcerr.PermissionError:
       raise http.HttpInternalServerError("Internal error: no permission to"
@@ -430,12 +430,12 @@ class ResourceBase(object):
       raise http.HttpServiceUnavailable("Job queue is full, needs archiving")
     except errors.JobQueueDrainError:
       raise http.HttpServiceUnavailable("Job queue is drained, cannot submit")
-    except rpcerr.NoMasterError, err:
+    except rpcerr.NoMasterError as err:
       raise http.HttpBadGateway("Master seems to be unreachable: %s" % err)
     except rpcerr.PermissionError:
       raise http.HttpInternalServerError("Internal error: no permission to"
                                          " connect to the master daemon")
-    except rpcerr.TimeoutError, err:
+    except rpcerr.TimeoutError as err:
       raise http.HttpGatewayTimeout("Timeout while talking to the master"
                                     " daemon: %s" % err)
 
@@ -444,8 +444,8 @@ def GetResourceOpcodes(cls):
   """Returns all opcodes used by a resource.
 
   """
-  return frozenset(filter(None, (getattr(cls, method_attrs.opcode, None)
-                                 for method_attrs in OPCODE_ATTRS)))
+  return frozenset([_f for _f in (getattr(cls, method_attrs.opcode, None)
+                                 for method_attrs in OPCODE_ATTRS) if _f])
 
 
 def GetHandlerAccess(handler, method):
@@ -464,7 +464,7 @@ def GetHandler(get_fn, aliases):
   if not isinstance(result, dict) or aliases is None:
     return result
 
-  for (param, alias) in aliases.items():
+  for (param, alias) in list(aliases.items()):
     if param in result:
       if alias in result:
         raise http.HttpBadRequest("Parameter '%s' has an alias of '%s', but"
@@ -503,7 +503,7 @@ def ProduceForbiddenParamDict(class_name, method_name, param_list):
 
   param_dict = {}
   for value in param_list:
-    if isinstance(value, basestring):
+    if isinstance(value, str):
       param_dict[value] = ALL_VALUES_FORBIDDEN
     elif isinstance(value, tuple):
       if len(value) != 2:
@@ -606,7 +606,7 @@ class _MetaOpcodeResource(type):
     return obj
 
 
-class OpcodeResource(ResourceBase):
+class OpcodeResource(ResourceBase, metaclass=_MetaOpcodeResource):
   """Base class for opcode-based RAPI resources.
 
   Instances of this class automatically gain handler functions through
@@ -665,7 +665,6 @@ class OpcodeResource(ResourceBase):
     getting opcode parameters (see L{baserlib.OpcodeResource._GetDefaultData})
 
   """
-  __metaclass__ = _MetaOpcodeResource
 
   def _ForbiddenHandler(self, method_fn, forbidden_params, rename_dict):
     """Examines provided parameters for forbidden values.

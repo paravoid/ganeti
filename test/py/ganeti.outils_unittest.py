@@ -35,7 +35,7 @@ import unittest
 
 from ganeti import outils
 
-import testutils
+from . import testutils
 
 
 class SlotsAutoSlot(outils.AutoSlots):
@@ -44,9 +44,7 @@ class SlotsAutoSlot(outils.AutoSlots):
     return attr["SLOTS"]
 
 
-class AutoSlotted(object):
-  __metaclass__ = SlotsAutoSlot
-
+class AutoSlotted(object, metaclass=SlotsAutoSlot):
   SLOTS = ["foo", "bar", "baz"]
 
 
@@ -61,7 +59,7 @@ class TestContainerToDicts(unittest.TestCase):
     for value in [None, 19410, "xyz"]:
       try:
         outils.ContainerToDicts(value)
-      except TypeError, err:
+      except TypeError as err:
         self.assertTrue(str(err).startswith("Unknown container type"))
       else:
         self.fail("Exception was not raised")
@@ -86,14 +84,14 @@ class TestContainerFromDicts(unittest.TestCase):
     for cls in [str, int, bool]:
       try:
         outils.ContainerFromDicts(None, cls, NotImplemented)
-      except TypeError, err:
+      except TypeError as err:
         self.assertTrue(str(err).startswith("Unknown container type"))
       else:
         self.fail("Exception was not raised")
 
       try:
         outils.ContainerFromDicts(None, cls(), NotImplemented)
-      except TypeError, err:
+      except TypeError as err:
         self.assertTrue(str(err).endswith("is not a type"))
       else:
         self.fail("Exception was not raised")

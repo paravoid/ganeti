@@ -462,7 +462,7 @@ class Mainloop(object):
     timed events
 
   """
-  _SHUTDOWN_TIMEOUT_PRIORITY = -(sys.maxint - 1)
+  _SHUTDOWN_TIMEOUT_PRIORITY = -(sys.maxsize - 1)
 
   def __init__(self):
     """Constructs a new Mainloop instance.
@@ -529,7 +529,7 @@ class Mainloop(object):
           pass
 
       # Check whether a signal was raised
-      for (sig, handler) in signal_handlers.items():
+      for (sig, handler) in list(signal_handlers.items()):
         if handler.called:
           self._CallSignalWaiters(sig)
           if sig in (signal.SIGTERM, signal.SIGINT):
@@ -721,7 +721,7 @@ def GenericMain(daemon_name, optionparser,
     if options.bind_address != default_bind_address:
       msg = ("Can't specify both, bind address (%s) and bind interface (%s)" %
              (options.bind_address, options.bind_interface))
-      print >> sys.stderr, msg
+      print(msg, file=sys.stderr)
       sys.exit(constants.EXIT_FAILURE)
     interface_ip_addresses = \
       netutils.GetInterfaceIpAddresses(options.bind_interface)
@@ -731,7 +731,7 @@ def GenericMain(daemon_name, optionparser,
       if_addresses = interface_ip_addresses[constants.IP4_VERSION]
     if len(if_addresses) < 1:
       msg = "Failed to find IP for interface %s" % options.bind_interace
-      print >> sys.stderr, msg
+      print(msg, file=sys.stderr)
       sys.exit(constants.EXIT_FAILURE)
     options.bind_address = if_addresses[0]
 
@@ -741,9 +741,9 @@ def GenericMain(daemon_name, optionparser,
       "key": options.ssl_key,
       }
 
-    for name, path in ssl_paths.iteritems():
+    for name, path in ssl_paths.items():
       if not os.path.isfile(path):
-        print >> sys.stderr, "SSL %s file '%s' was not found" % (name, path)
+        print("SSL %s file '%s' was not found" % (name, path), file=sys.stderr)
         sys.exit(constants.EXIT_FAILURE)
 
     # TODO: By initiating http.HttpSslParams here we would only read the files
@@ -754,7 +754,7 @@ def GenericMain(daemon_name, optionparser,
   if not result:
     msg = ("%s started using wrong user ID (%d), expected %d" %
            (daemon_name, running_uid, expected_uid))
-    print >> sys.stderr, msg
+    print(msg, file=sys.stderr)
     sys.exit(constants.EXIT_FAILURE)
 
   if check_fn is not None:
@@ -802,8 +802,8 @@ def GenericMain(daemon_name, optionparser,
 
   try:
     utils.WritePidFile(utils.DaemonPidFileName(daemon_name))
-  except errors.PidFileLockError, err:
-    print >> sys.stderr, "Error while locking PID file:\n%s" % err
+  except errors.PidFileLockError as err:
+    print("Error while locking PID file:\n%s" % err, file=sys.stderr)
     sys.exit(constants.EXIT_FAILURE)
 
   try:
@@ -813,7 +813,7 @@ def GenericMain(daemon_name, optionparser,
         prep_results = prepare_fn(options, args)
       else:
         prep_results = None
-    except Exception, err:
+    except Exception as err:
       utils.WriteErrorToFD(wpipe, _BeautifyError(err))
       raise
 

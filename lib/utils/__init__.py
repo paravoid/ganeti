@@ -113,14 +113,14 @@ def ForceDictType(target, key_types, allowed_values=None):
     if ktype in (constants.VTYPE_STRING, constants.VTYPE_MAYBE_STRING):
       if target[key] is None and ktype == constants.VTYPE_MAYBE_STRING:
         pass
-      elif not isinstance(target[key], basestring):
+      elif not isinstance(target[key], str):
         if isinstance(target[key], bool) and not target[key]:
           target[key] = ""
         else:
           msg = "'%s' (value %s) is not a valid string" % (key, target[key])
           raise errors.TypeEnforcementError(msg)
     elif ktype == constants.VTYPE_BOOL:
-      if isinstance(target[key], basestring) and target[key]:
+      if isinstance(target[key], str) and target[key]:
         if target[key].lower() == constants.VALUE_FALSE:
           target[key] = False
         elif target[key].lower() == constants.VALUE_TRUE:
@@ -135,7 +135,7 @@ def ForceDictType(target, key_types, allowed_values=None):
     elif ktype == constants.VTYPE_SIZE:
       try:
         target[key] = ParseUnit(target[key])
-      except errors.UnitParseError, err:
+      except errors.UnitParseError as err:
         msg = "'%s' (value %s) is not a valid size. error: %s" % \
               (key, target[key], err)
         raise errors.TypeEnforcementError(msg)
@@ -186,9 +186,9 @@ def _ComputeMissingKeys(key_path, options, defaults):
   @return: A list of invalid keys
 
   """
-  defaults_keys = frozenset(defaults.keys())
+  defaults_keys = frozenset(list(defaults.keys()))
   invalid = []
-  for key, value in options.items():
+  for key, value in list(options.items()):
     if key_path:
       new_path = "%s/%s" % (key_path, key)
     else:
@@ -236,7 +236,7 @@ def ListVolumeGroups():
     try:
       name, size = line.split()
       size = int(float(size))
-    except (IndexError, ValueError), err:
+    except (IndexError, ValueError) as err:
       logging.error("Invalid output from vgs (%s): %s", err, line)
       continue
 
@@ -303,18 +303,18 @@ def ParseCpuMask(cpu_mask):
                               " (only one hyphen allowed): %s" % range_def)
     try:
       lower = int(boundaries[0])
-    except (ValueError, TypeError), err:
+    except (ValueError, TypeError) as err:
       raise errors.ParseError("Invalid CPU ID value for lower boundary of"
                               " CPU ID range: %s" % str(err))
     try:
       higher = int(boundaries[-1])
-    except (ValueError, TypeError), err:
+    except (ValueError, TypeError) as err:
       raise errors.ParseError("Invalid CPU ID value for higher boundary of"
                               " CPU ID range: %s" % str(err))
     if lower > higher:
       raise errors.ParseError("Invalid CPU ID range definition"
                               " (%d > %d): %s" % (lower, higher, range_def))
-    cpu_list.extend(range(lower, higher + 1))
+    cpu_list.extend(list(range(lower, higher + 1)))
   return cpu_list
 
 
@@ -353,9 +353,9 @@ def GetHomeDir(user, default=None):
 
   """
   try:
-    if isinstance(user, basestring):
+    if isinstance(user, str):
       result = pwd.getpwnam(user)
-    elif isinstance(user, (int, long)):
+    elif isinstance(user, int):
       result = pwd.getpwuid(user)
     else:
       raise errors.ProgrammerError("Invalid type passed to GetHomeDir (%s)" %
@@ -422,7 +422,7 @@ def SingleWaitForFdCondition(fdobj, event, timeout):
     # could wait forever. This should check a global "quit" flag or something
     # every so often.
     io_events = poller.poll(timeout)
-  except select.error, err:
+  except select.error as err:
     if err[0] != errno.EINTR:
       raise
     io_events = []
@@ -587,7 +587,7 @@ def FindMatch(data, name):
   if name in data:
     return (data[name], [])
 
-  for key, value in data.items():
+  for key, value in list(data.items()):
     # Regex objects
     if hasattr(key, "match"):
       m = key.match(name)
@@ -773,7 +773,7 @@ class SignalHandler(object):
     This will reset all the signals to their previous handlers.
 
     """
-    for signum, prev_handler in self._previous.items():
+    for signum, prev_handler in list(self._previous.items()):
       signal.signal(signum, prev_handler)
       # If successful, remove from dict
       del self._previous[signum]
@@ -828,7 +828,7 @@ class FieldSet(object):
     @return: either None or a regular expression match object
 
     """
-    for m in itertools.ifilter(None, (val.match(field) for val in self.items)):
+    for m in filter(None, (val.match(field) for val in self.items)):
       return m
     return None
 

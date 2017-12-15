@@ -37,7 +37,7 @@ import mimetools
 import select
 import socket
 
-from cStringIO import StringIO
+from io import StringIO
 
 import OpenSSL
 
@@ -84,7 +84,7 @@ _SSL_UNEXPECTED_EOF = "Unexpected EOF"
 (SOCKOP_SEND,
  SOCKOP_RECV,
  SOCKOP_SHUTDOWN,
- SOCKOP_HANDSHAKE) = range(4)
+ SOCKOP_HANDSHAKE) = list(range(4))
 
 # send/receive quantum
 SOCK_BUF_SIZE = 32768
@@ -437,7 +437,7 @@ def SocketOperation(sock, op, arg1, timeout):
       except OpenSSL.SSL.WantX509LookupError:
         continue
 
-      except OpenSSL.SSL.ZeroReturnError, err:
+      except OpenSSL.SSL.ZeroReturnError as err:
         # SSL Connection has been closed. In SSL 3.0 and TLS 1.0, this only
         # occurs if a closure alert has occurred in the protocol, i.e. the
         # connection has been closed cleanly. Note that this does not
@@ -452,7 +452,7 @@ def SocketOperation(sock, op, arg1, timeout):
         # SSL_shutdown shouldn't return SSL_ERROR_ZERO_RETURN
         raise socket.error(err.args)
 
-      except OpenSSL.SSL.SysCallError, err:
+      except OpenSSL.SSL.SysCallError as err:
         if op == SOCKOP_SEND:
           # arg1 is the data when writing
           if err.args and err.args[0] == -1 and arg1 == "":
@@ -470,10 +470,10 @@ def SocketOperation(sock, op, arg1, timeout):
 
         raise socket.error(err.args)
 
-      except OpenSSL.SSL.Error, err:
+      except OpenSSL.SSL.Error as err:
         raise socket.error(err.args)
 
-    except socket.error, err:
+    except socket.error as err:
       if err.args and err.args[0] == errno.EAGAIN:
         # Ignore EAGAIN
         continue
@@ -517,7 +517,7 @@ def ShutdownConnection(sock, close_timeout, write_timeout, msgreader, force):
                     write_timeout)
   except HttpSocketTimeout:
     raise HttpError("Timeout while shutting down connection")
-  except socket.error, err:
+  except socket.error as err:
     # Ignore ENOTCONN
     if not (err.args and err.args[0] == errno.ENOTCONN):
       raise HttpError("Error while shutting down connection: %s" % err)
@@ -536,7 +536,7 @@ def Handshake(sock, write_timeout):
     return SocketOperation(sock, SOCKOP_HANDSHAKE, None, write_timeout)
   except HttpSocketTimeout:
     raise HttpError("Timeout during SSL handshake")
-  except socket.error, err:
+  except socket.error as err:
     raise HttpError("Error in SSL handshake: %s" % err)
 
 
@@ -755,7 +755,7 @@ class HttpMessageWriter(object):
 
     # Add headers
     if self._msg.start_line.version != HTTP_0_9:
-      for name, value in self._msg.headers.iteritems():
+      for name, value in self._msg.headers.items():
         buf.write("%s: %s\r\n" % (name, value))
 
     buf.write("\r\n")
