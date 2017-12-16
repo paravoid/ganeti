@@ -32,7 +32,10 @@
 
 """
 
-import ipaddr
+try:
+  import ipaddress
+except ImportError:
+  import ipaddr as ipaddress
 
 from bitarray import bitarray
 
@@ -78,7 +81,7 @@ class AddressPool(object):
 
     self.net = network
 
-    self.network = ipaddr.IPNetwork(self.net.network)
+    self.network = ipaddress.IPNetwork(self.net.network)
     if self.network.numhosts > IPV4_NETWORK_MAX_NUM_HOSTS:
       raise errors.AddressPoolError("A big network with %s host(s) is currently"
                                     " not supported. please specify at most a"
@@ -93,12 +96,12 @@ class AddressPool(object):
                                     (str(self.network.numhosts),
                                      IPV4_NETWORK_MIN_SIZE))
     if self.net.gateway:
-      self.gateway = ipaddr.IPAddress(self.net.gateway)
+      self.gateway = ipaddress.IPAddress(self.net.gateway)
 
     if self.net.network6:
-      self.network6 = ipaddr.IPv6Network(self.net.network6)
+      self.network6 = ipaddress.IPv6Network(self.net.network6)
     if self.net.gateway6:
-      self.gateway6 = ipaddr.IPv6Address(self.net.gateway6)
+      self.gateway6 = ipaddress.IPv6Address(self.net.gateway6)
 
     if self.net.reservations:
       self.reservations = bitarray(self.net.reservations)
@@ -120,12 +123,12 @@ class AddressPool(object):
   def Contains(self, address):
     if address is None:
       return False
-    addr = ipaddr.IPAddress(address)
+    addr = ipaddress.IPAddress(address)
 
     return addr in self.network
 
   def _GetAddrIndex(self, address):
-    addr = ipaddr.IPAddress(address)
+    addr = ipaddress.IPAddress(address)
 
     if not addr in self.network:
       raise errors.AddressPoolError("%s does not contain %s" %
