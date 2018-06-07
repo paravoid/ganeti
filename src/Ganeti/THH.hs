@@ -427,14 +427,16 @@ buildConsField ftype = do
   ftype' <- ftype
   return (myNotStrict, ftype')
 
+derivesFromNames :: [Name] -> [DerivClause]
+derivesFromNames names = [DerivClause Nothing $ map ConT names]
+
 -- | Builds a constructor based on a simple definition (not field-based).
 buildSimpleCons :: Name -> SimpleObject -> Q Dec
 buildSimpleCons tname cons = do
-  names <- mapM conT [''Show, ''Eq]
   decl_d <- mapM (\(cname, fields) -> do
                     fields' <- mapM (buildConsField . snd) fields
                     return $ NormalC (mkName cname) fields') cons
-  return $ DataD [] tname [] Nothing decl_d names
+  return $ DataD [] tname [] Nothing decl_d $ derivesFromNames [''Show, ''Eq]
 
 -- | Generate the save function for a given type.
 genSaveSimpleObj :: Name                            -- ^ Object type
@@ -453,11 +455,11 @@ genSaveSimpleObj tname sname opdefs fn = do
 -- | Generates a data type declaration.
 --
 -- The type will have a fixed list of instances.
-strADTDecl :: Name -> [String] -> Q Dec
+strADTDecl :: Name -> [String] -> Dec
 strADTDecl name constructors = do
   DataD [] name [] Nothing
           (map (flip NormalC [] . mkName) constructors)
-          <$> mapM conT [''Show, ''Eq, ''Enum, ''Bounded, ''Ord]
+          $ derivesFromNames [''Show, ''Eq, ''Enum, ''Bounded, ''Ord]
 
 -- | Generates a toRaw function.
 --
@@ -533,7 +535,7 @@ declareADT fn traw sname cons = do
   let name = mkName sname
       -- process cons in the format expected by genToRaw
       cons' = map (second fn) cons
-  ddecl <- strADTDecl (mkName sname) (map fst cons)
+  let ddecl = strADTDecl (mkName sname) (map fst cons)
   toraw <- genToRaw traw (toRawName sname) name cons'
   fromraw <- genFromRaw traw (fromRawName sname) name cons'
   return $ ddecl:toraw ++ fromraw
@@ -796,7 +798,7 @@ genOpCode name cons = do
                     fields' <- mapM (fieldTypeInfo "op") fields
                     return $ RecC (mkName cname) fields')
             cons
-  declD <- DataD [] tname [] Nothing decl_d <$> mapM conT [''Show, ''Eq]
+  let declD = DataD [] tname [] Nothing decl_d $ derivesFromNames [''Show, ''Eq]
   let (allfsig, allffn) = genAllOpFields "allOpFields" cons
   -- DictObject
   let luxiCons = map opcodeConsToLuxiCons cons
@@ -923,7 +925,7 @@ genLuxiOp name cons = do
                     let fields'' = zip (repeat myNotStrict) fields'
                     return $ NormalC (mkName cname) fields'')
             cons
-  declD <- DataD [] (mkName name) [] Nothing decl_d <$> mapM conT [''Show, ''Eq]
+  let declD = DataD [] (mkName name) [] Nothing decl_d $ derivesFromNames [''Show, ''Eq]
   -- generate DictObject instance
   dictObjInst <- genOpCodeDictObject tname saveLuxiConstructor
                                      loadOpConstructor cons
@@ -970,7 +972,7 @@ buildObject sname field_pfx fields = do
   let name = mkName sname
   fields_d <- mapM (fieldTypeInfo field_pfx) fields
   let decl_d = RecC name fields_d
-  declD <- DataD [] name [] Nothing [decl_d] <$> mapM conT [''Show, ''Eq]
+  let declD = DataD [] name [] Nothing [decl_d] $ derivesFromNames [''Show, ''Eq]
   ser_decls <- buildObjectSerialisation sname fields
   return $ declD:ser_decls
 
@@ -1088,7 +1090,7 @@ buildObjectWithForthcoming sname field_pfx fields = do
                  [(myNotStrict, ConT (mkName real_data_nm))]
       forth_d = NormalC (mkName forth_nm)
                   [(myNotStrict, ConT (mkName forth_data_nm))]
-  declD <- DataD [] name [] Nothing [real_d, forth_d] <$> mapM conT [''Show, ''Eq]
+  let declD = DataD [] name [] Nothing [real_d, forth_d] $ derivesFromNames [''Show, ''Eq]
 
   read_body <- [| branchOnField "forthcoming"
                   (liftM $(conE $ mkName forth_nm) . JSON.readJSON)
@@ -1375,8 +1377,8 @@ buildParam sname field_pfx fields = do
   fields_p <- mapM (paramFieldTypeInfo field_pfx) fields
   let decl_f = RecC name_f fields_f
       decl_p = RecC name_p fields_p
-  declF <- DataD [] name_f [] Nothing [decl_f] <$> mapM conT [''Show, ''Eq]
-  declP <- DataD [] name_p [] Nothing [decl_p] <$> mapM conT [''Show, ''Eq]
+  let declF = DataD [] name_f [] Nothing [decl_f] $ derivesFromNames [''Show, ''Eq]
+  let declP = DataD [] name_p [] Nothing [decl_p] $ derivesFromNames [''Show, ''Eq]
   ser_decls_f <- buildObjectSerialisation sname_f fields
   ser_decls_p <- buildPParamSerialisation sname_p fields
   fill_decls <- fillParam sname field_pfx fields
