@@ -621,7 +621,7 @@ def _RunCmdPipe(cmd, env, via_shell, cwd, interactive, timeout, noclose_fds,
 
       for fd, event in pollresult:
         if event & select.POLLIN or event & select.POLLPRI:
-          data = fdmap[fd][1].read()
+          data = fdmap[fd][1].read().decode("utf-8")
           # no data from read signifies EOF (the same as POLLHUP)
           if not data:
             poller.unregister(fd)
