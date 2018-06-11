@@ -128,12 +128,17 @@ def GetRepeatedKeys(*dicts):
   return set(FindDuplicates(keys))
 
 
-def _NiceSortTryInt(val):
-  """Attempts to convert a string to an integer.
+def _NiceSortMassageKey(val):
+  """Massage sort keys to return suitable strings
+
+  Make sure all keys are converted to strings and zero-pad integer keys to
+  allow string sorting.
 
   """
-  if val and val.isdigit():
-    return int(val)
+  if val is None:
+    return ""
+  elif val and val.isdigit():
+    return "%010d" % int(val)
   else:
     return val
 
@@ -142,7 +147,7 @@ def NiceSortKey(value):
   """Extract key for sorting.
 
   """
-  return [_NiceSortTryInt(grp)
+  return [_NiceSortMassageKey(grp)
           for grp in _SORTER_RE.match(str(value)).groups()]
 
 
