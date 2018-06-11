@@ -39,7 +39,7 @@ import sys
 import re
 import itertools
 import textwrap
-from cStringIO import StringIO
+from io import StringIO
 
 from ganeti import utils
 from ganeti import compat
@@ -212,7 +212,7 @@ def main():
     for (clsname, calls) in sorted(module.CALLS.items()):
       _WriteBaseClass(sw, clsname, calls.values())
 
-  print buf.getvalue().rstrip()
+  print(buf.getvalue().rstrip())
 
 
 if __name__ == "__main__":
