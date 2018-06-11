@@ -2342,11 +2342,11 @@ def _BuildLockFields():
   return _PrepareFieldList([
     # TODO: Lock names are not always hostnames. Should QFF_HOSTNAME be used?
     (_MakeField("name", "Name", QFT_TEXT, "Lock name"), None, 0,
-     lambda ctx, (name, mode, owners, pending): name),
+     lambda ctx, params: params[0]),
     (_MakeField("mode", "Mode", QFT_OTHER,
                 "Mode in which the lock is currently acquired"
                 " (exclusive or shared)"),
-     LQ_MODE, 0, lambda ctx, (name, mode, owners, pending): mode),
+                LQ_MODE, 0, lambda ctx, params: params[1]),
     (_MakeField("owner", "Owner", QFT_OTHER, "Current lock owner(s)"),
      LQ_OWNER, 0, _GetLockOwners),
     (_MakeField("pending", "Pending", QFT_OTHER,
@@ -2626,7 +2626,7 @@ def _BuildJobFields():
   """
   fields = [
     (_MakeField("id", "ID", QFT_NUMBER, "Job ID"),
-     None, QFF_JOB_ID, lambda _, (job_id, job): job_id),
+     None, QFF_JOB_ID, lambda _, jid_job: jid_job[0]),
     (_MakeField("status", "Status", QFT_TEXT, "Job status"),
      None, 0, _JobUnavail(lambda job: job.CalcStatus())),
     (_MakeField("priority", "Priority", QFT_NUMBER,
@@ -2634,7 +2634,7 @@ def _BuildJobFields():
                  (constants.OP_PRIO_LOWEST, constants.OP_PRIO_HIGHEST))),
      None, 0, _JobUnavail(lambda job: job.CalcPriority())),
     (_MakeField("archived", "Archived", QFT_BOOL, "Whether job is archived"),
-     JQ_ARCHIVED, 0, lambda _, (job_id, job): job.archived),
+     JQ_ARCHIVED, 0, lambda _, jid_job: jid_job[0]),
     (_MakeField("ops", "OpCodes", QFT_OTHER, "List of all opcodes"),
      None, 0, _PerJobOp(lambda op: op.input.__getstate__())),
     (_MakeField("opresult", "OpCode_result", QFT_OTHER,
@@ -2698,7 +2698,7 @@ def _BuildExportFields():
   """
   fields = [
     (_MakeField("node", "Node", QFT_TEXT, "Node name"),
-     None, QFF_HOSTNAME, lambda _, (node_name, expname): node_name),
+     None, QFF_HOSTNAME, lambda _, fields: fields[0]),
     (_MakeField("export", "Export", QFT_TEXT, "Export name"),
      None, 0, _GetExportName),
     ]
