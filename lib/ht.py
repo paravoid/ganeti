@@ -336,7 +336,7 @@ def TRegex(pobj):
 
   """
   desc = WithDesc("String matching regex \"%s\"" %
-                  pobj.pattern.encode("string_escape"))
+                  pobj.pattern.encode("unicode_escape"))
 
   return desc(TAnd(TString, pobj.match))
 
