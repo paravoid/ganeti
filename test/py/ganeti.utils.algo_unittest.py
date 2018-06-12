@@ -38,7 +38,7 @@ from ganeti import constants
 from ganeti import compat
 from ganeti.utils import algo
 
-from . import testutils
+import testutils
 
 
 class TestUniqueSequence(unittest.TestCase):
@@ -230,13 +230,13 @@ class TestNiceSort(unittest.TestCase):
 
   def testNiceSortKey(self):
     self.assertEqual(algo.NiceSortKey(""),
-                     ([None] * algo._SORTER_GROUPS) + [""])
+                     ([""] * algo._SORTER_GROUPS) + [""])
     self.assertEqual(algo.NiceSortKey("Hello World"),
                      ["Hello World"] +
-                     ([None] * int(algo._SORTER_GROUPS - 1)) + [""])
+                     ([""] * int(algo._SORTER_GROUPS - 1)) + [""])
     self.assertEqual(algo.NiceSortKey("node1.net75.bld3.example.com"),
-                     ["node", 1, ".net", 75, ".bld", 3, ".example.com",
-                      None, ""])
+                     ["node", "0000000001", ".net", "0000000075", ".bld", "0000000003", ".example.com",
+                      "", ""])
 
 
 class TestInvertDict(unittest.TestCase):
