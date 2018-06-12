@@ -35,6 +35,7 @@
 import re
 import os
 import time
+import codecs
 import collections
 
 from ganeti import errors
@@ -321,7 +322,7 @@ def GenerateSecret(numbytes=20):
   @return: an hex representation of the pseudo-random sequence
 
   """
-  return os.urandom(numbytes).encode("hex")
+  return codecs.encode(os.urandom(numbytes), "hex")
 
 
 def _MakeMacAddrRegexp(octets):
