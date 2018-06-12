@@ -232,11 +232,11 @@ def WriteFile(file_name, fn=None, data=None,
       if data is not None:
         if isinstance(data, str):
           data = data.encode()
-        assert isinstance(data, str)
+        assert isinstance(data, bytes)
         to_write = len(data)
         offset = 0
         while offset < to_write:
-          written = os.write(fd, buffer(data, offset))
+          written = os.write(fd, memoryview(data)[offset:])
           assert written >= 0
           assert written <= to_write - offset
           offset += written
@@ -904,7 +904,8 @@ def WritePidFile(pidfile):
       msg.append(", PID read from file is %s" % pid)
     raise errors.PidFileLockError("".join(msg))
 
-  os.write(fd_pidfile, "%d\n" % os.getpid())
+  data = "%d\n" % os.getpid()
+  os.write(fd_pidfile, data.encode("ascii"))
 
   return fd_pidfile
 
