@@ -331,8 +331,8 @@ class LUClusterVerifyConfig(NoHooksLU, _VerifyErrors):
     # occur, it would never be caught by VerifyGroup, which only acts on
     # nodes/instances reachable from existing node groups.
 
-    dangling_nodes = set(node for node in list(self.all_node_info.values())
-                         if node.group not in self.all_group_info)
+    dangling_nodes = [node for node in list(self.all_node_info.values())
+                         if node.group not in self.all_group_info]
 
     dangling_instances = {}
     no_node_instances = []
