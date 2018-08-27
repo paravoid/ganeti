@@ -619,7 +619,7 @@ x509CertSignatureHeader = "X-Ganeti-Signature"
 
 -- | Digest used to sign certificates ("openssl x509" uses SHA1 by default)
 x509CertSignDigest :: String
-x509CertSignDigest = "SHA1"
+x509CertSignDigest = "SHA256"
 
 -- * Import/export daemon mode
 
