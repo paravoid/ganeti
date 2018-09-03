@@ -159,9 +159,13 @@ class TestCertVerification(testutils.GanetiTestCase):
     testutils.GanetiTestCase.setUp(self)
 
     self.tmpdir = tempfile.mkdtemp()
+    self.orig_rsa_key_bits = constants.RSA_KEY_BITS
+    self.orig_x509_weak_signature_algorithms = constants.X509_WEAK_SIGNATURE_ALGORITHMS
 
   def tearDown(self):
     shutil.rmtree(self.tmpdir)
+    constants.RSA_KEY_BITS = self.orig_rsa_key_bits
+    constants.X509_WEAK_SIGNATURE_ALGORITHMS = self.orig_x509_weak_signature_algorithms
 
   def testVerifyCertificate(self):
     cert_pem = testutils.ReadTestData("cert1.pem")
@@ -169,7 +173,7 @@ class TestCertVerification(testutils.GanetiTestCase):
                                            cert_pem)
 
     # Not checking return value as this certificate is expired
-    utils.VerifyX509Certificate(cert, 30, 7)
+    utils.VerifyX509Certificate(cert, 30, 7, True)
 
   @staticmethod
   def _GenCert(key, before, validity):
@@ -198,50 +202,87 @@ class TestCertVerification(testutils.GanetiTestCase):
     # few lines take more than NODE_MAX_CLOCK_SKEW / 2
     for before in [-1, 0, SKEW / 4, SKEW / 2]:
       cert = self._GenCert(key, before, validity)
-      result = utils.VerifyX509Certificate(cert, 1, 2)
+      result = utils.VerifyX509Certificate(cert, 1, 2, True)
       self.assertEqual(result, (None, None))
 
     # skew too great, not accepting certs
     for before in [SKEW * 2, SKEW * 10]:
       cert = self._GenCert(key, before, validity)
-      (status, msg) = utils.VerifyX509Certificate(cert, 1, 2)
+      (status, msg) = utils.VerifyX509Certificate(cert, 1, 2, True)
       self.assertEqual(status, utils.CERT_WARNING)
       self.assertTrue(msg.startswith("Certificate not yet valid"))
 
+  def testKeyStrength(self):
+    # Create private and public key
+    key = OpenSSL.crypto.PKey()
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, constants.RSA_KEY_BITS)
 
-class TestVerifyCertificateInner(unittest.TestCase):
+    validity = 7 * 86400
+    cert = self._GenCert(key, 0, validity)
+
+    result = utils.VerifyX509Certificate(cert, None, None, True)
+    self.assertEqual(result, (None, None))
+
+    constants.RSA_KEY_BITS *= 2
+    status, msg = utils.VerifyX509Certificate(cert, None, None, True)
+    self.assertTrue(status == utils.CERT_WARNING)
+    self.assertTrue(msg.startswith("weak public/private key"))
+    constants.RSA_KEY_BITS = self.orig_rsa_key_bits
+
+  def testSigningAlgoStrength(self):
+    # Create private and public key
+    key = OpenSSL.crypto.PKey()
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, constants.RSA_KEY_BITS)
+
+    validity = 7 * 86400
+    cert = self._GenCert(key, 0, validity)
+
+    result = utils.VerifyX509Certificate(cert, None, None, True)
+    self.assertEqual(result, (None, None))
+
+    signing_algo = cert.get_signature_algorithm()
+
+    constants.X509_WEAK_SIGNATURE_ALGORITHMS = \
+        constants.X509_WEAK_SIGNATURE_ALGORITHMS.union([signing_algo])
+    status, msg = utils.VerifyX509Certificate(cert, None, None, True)
+    self.assertTrue(status == utils.CERT_WARNING)
+    self.assertTrue(msg.startswith("weak signature algorithm"))
+    constants.X509_WEAK_SIGNATURE_ALGORITHMS = self.orig_x509_weak_signature_algorithms
+
+
+class TestVerifyX509CertificateValidity(unittest.TestCase):
   def test(self):
-    vci = utils.x509._VerifyCertificateInner
+    vcv = utils.x509._VerifyX509CertificateValidity
 
     # Valid
-    self.assertEqual(vci(False, 1263916313, 1298476313, 1266940313, 30, 7),
+    self.assertEqual(vcv(False, 1263916313, 1298476313, 1266940313, 30, 7),
                      (None, None))
 
     # Not yet valid
-    (errcode, msg) = vci(False, 1266507600, 1267544400, 1266075600, 30, 7)
+    (errcode, msg) = vcv(False, 1266507600, 1267544400, 1266075600, 30, 7)
     self.assertEqual(errcode, utils.CERT_WARNING)
 
     # Expiring soon
-    (errcode, msg) = vci(False, 1266507600, 1267544400, 1266939600, 30, 7)
+    (errcode, msg) = vcv(False, 1266507600, 1267544400, 1266939600, 30, 7)
     self.assertEqual(errcode, utils.CERT_ERROR)
 
-    (errcode, msg) = vci(False, 1266507600, 1267544400, 1266939600, 30, 1)
+    (errcode, msg) = vcv(False, 1266507600, 1267544400, 1266939600, 30, 1)
     self.assertEqual(errcode, utils.CERT_WARNING)
 
-    (errcode, msg) = vci(False, 1266507600, None, 1266939600, 30, 7)
+    (errcode, msg) = vcv(False, 1266507600, None, 1266939600, 30, 7)
     self.assertEqual(errcode, None)
 
     # Expired
-    (errcode, msg) = vci(True, 1266507600, 1267544400, 1266939600, 30, 7)
+    (errcode, msg) = vcv(True, 1266507600, 1267544400, 1266939600, 30, 7)
     self.assertEqual(errcode, utils.CERT_ERROR)
 
-    (errcode, msg) = vci(True, None, 1267544400, 1266939600, 30, 7)
+    (errcode, msg) = vcv(True, None, 1267544400, 1266939600, 30, 7)
     self.assertEqual(errcode, utils.CERT_ERROR)
 
-    (errcode, msg) = vci(True, 1266507600, None, 1266939600, 30, 7)
+    (errcode, msg) = vcv(True, 1266507600, None, 1266939600, 30, 7)
     self.assertEqual(errcode, utils.CERT_ERROR)
 
-    (errcode, msg) = vci(True, None, None, 1266939600, 30, 7)
+    (errcode, msg) = vcv(True, None, None, 1266939600, 30, 7)
     self.assertEqual(errcode, utils.CERT_ERROR)
 
 

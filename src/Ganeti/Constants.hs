@@ -621,6 +621,14 @@ x509CertSignatureHeader = "X-Ganeti-Signature"
 x509CertSignDigest :: String
 x509CertSignDigest = "SHA256"
 
+-- | Known-weak certificate signature algorithms
+x509SignatureAlgoSha1 :: String
+x509SignatureAlgoSha1 = "sha1WithRSAEncryption"
+
+x509WeakSignatureAlgorithms :: FrozenSet String
+x509WeakSignatureAlgorithms = ConstantUtils.mkSet [x509SignatureAlgoSha1]
+
+
 -- * Import/export daemon mode
 
 iemExport :: String

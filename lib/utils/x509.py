@@ -34,7 +34,9 @@
 import calendar
 import datetime
 import errno
+import itertools
 import logging
+import operator
 import re
 import time
 
@@ -128,8 +130,8 @@ def GetX509CertValidity(cert):
   return (not_before, not_after)
 
 
-def _VerifyCertificateInner(expired, not_before, not_after, now,
-                            warn_days, error_days):
+def _VerifyX509CertificateValidity(expired, not_before, not_after, now,
+                                   warn_days, error_days):
   """Verifies certificate validity.
 
   @type expired: bool
@@ -179,7 +181,34 @@ def _VerifyCertificateInner(expired, not_before, not_after, now,
   return (None, None)
 
 
-def VerifyX509Certificate(cert, warn_days, error_days):
+def _VerifyX509CertificateStrength(cert):
+  """Verifies the strength of a certificate
+
+  @type sig_algo: string
+  @param sig_algo: Name of the algorithm used to sign the certificate
+  @type key_bits: int
+  @param key_bits: Length of the public/private key in bits
+  """
+  sig_algo = cert.get_signature_algorithm()
+  key_bits = cert.get_pubkey().bits()
+
+  warnings = []
+  if sig_algo in constants.X509_WEAK_SIGNATURE_ALGORITHMS:
+    warnings.append("weak signature algorithm '%s',"
+                    " consider running gnt-cluster renew-crypto" % sig_algo)
+
+  if key_bits < constants.RSA_KEY_BITS:
+    warnings.append("weak public/private keypair: %d bits,"
+                    " should be at least %d bits,"
+                    " consider running gnt-cluster renew-crypto" %
+                    (key_bits, constants.RSA_KEY_BITS))
+
+  if warnings:
+    return (CERT_WARNING, ", ".join(warnings))
+  return (None, None)
+
+
+def VerifyX509Certificate(cert, warn_days, error_days, check_strength):
   """Verifies a certificate for LUClusterVerify.
 
   @type cert: OpenSSL.crypto.X509
@@ -188,6 +217,8 @@ def VerifyX509Certificate(cert, warn_days, error_days):
   @param warn_days: How many days before expiration a warning should be reported
   @type error_days: number or None
   @param error_days: How many days before expiration an error should be reported
+  @type check_strength: bool
+  @param check_strength: Whether to check the certificate's strength
 
   """
   # Depending on the pyOpenSSL version, this can just return (None, None)
@@ -195,8 +226,28 @@ def VerifyX509Certificate(cert, warn_days, error_days):
 
   now = time.time() + constants.NODE_MAX_CLOCK_SKEW
 
-  return _VerifyCertificateInner(cert.has_expired(), not_before, not_after,
-                                 now, warn_days, error_days)
+  checks = []
+  checks.append(_VerifyX509CertificateValidity(cert.has_expired(), not_before,
+                                               not_after, now, warn_days,
+                                               error_days))
+
+  if check_strength:
+    checks.append(_VerifyX509CertificateStrength(cert))
+
+
+  keyfunc = operator.itemgetter(0)
+
+  # Drop non-error results
+  checks = [c for c in checks if keyfunc(c) is not None]
+
+  if not checks:
+    return (None, None)
+
+  # Return all errors of the most severe level
+  for level, errors in itertools.groupby(sorted(checks, key=keyfunc,
+                                                reverse=True),
+                                                keyfunc):
+    return (level, ", ".join(e[1] for e in errors))
 
 
 def SignX509Certificate(cert, key, salt):

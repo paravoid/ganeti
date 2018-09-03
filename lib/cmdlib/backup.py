@@ -252,7 +252,7 @@ class LUBackupExport(LogicalUnit):
         raise errors.OpPrereqError("Unable to load destination X509 CA (%s)" %
                                    (err, ), errors.ECODE_INVAL)
 
-      (errcode, msg) = utils.VerifyX509Certificate(cert, None, None)
+      (errcode, msg) = utils.VerifyX509Certificate(cert, None, None, False)
       if errcode is not None:
         raise errors.OpPrereqError("Invalid destination X509 CA (%s)" %
                                    (msg, ), errors.ECODE_INVAL)

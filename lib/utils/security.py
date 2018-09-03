@@ -120,7 +120,7 @@ def VerifyCertificate(filename):
 
   (errcode, msg) = \
     x509.VerifyX509Certificate(cert, constants.SSL_CERT_EXPIRATION_WARN,
-                               constants.SSL_CERT_EXPIRATION_ERROR)
+                               constants.SSL_CERT_EXPIRATION_ERROR, True)
 
   if msg:
     fnamemsg = "While verifying %s: %s" % (filename, msg)
