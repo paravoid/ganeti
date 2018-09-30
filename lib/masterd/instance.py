@@ -32,6 +32,7 @@
 
 """
 
+import hashlib
 import logging
 import time
 import OpenSSL
@@ -1007,7 +1008,7 @@ def _GetInstDiskMagic(base, instance_name, index):
   @param index: Disk index
 
   """
-  h = compat.sha1_hash()
+  h = hashlib.sha1()
   h.update(str(constants.RIE_VERSION))
   h.update(base)
   h.update(instance_name)

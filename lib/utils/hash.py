@@ -32,9 +32,8 @@
 """
 
 import os
+import hashlib
 import hmac
-
-from ganeti import compat
 
 
 def Sha1Hmac(key, text, salt=None):
@@ -52,7 +51,7 @@ def Sha1Hmac(key, text, salt=None):
   else:
     salted_text = text
 
-  return hmac.new(key, salted_text, compat.sha1).hexdigest()
+  return hmac.new(key, salted_text, hashlib.sha1).hexdigest()
 
 
 def VerifySha1Hmac(key, text, digest, salt=None):
@@ -90,7 +89,7 @@ def _FingerprintFile(filename):
 
   f = open(filename)
 
-  fp = compat.sha1_hash()
+  fp = hashlib.sha1()
   while True:
     data = f.read(4096)
     if not data:
