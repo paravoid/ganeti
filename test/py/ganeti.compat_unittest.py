@@ -34,7 +34,7 @@ import unittest
 
 from ganeti import compat
 
-from . import testutils
+import testutils
 
 
 class TestPartial(testutils.GanetiTestCase):

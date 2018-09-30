@@ -36,8 +36,8 @@ import mock
 import os
 import shutil
 import tempfile
-from . import testutils
-from . import testutils_ssh
+import testutils
+import testutils_ssh
 import unittest
 
 from ganeti import backend
@@ -49,7 +49,7 @@ from ganeti import objects
 from ganeti import serializer
 from ganeti import ssh
 from ganeti import utils
-from .testutils.config_mock import ConfigMock
+from testutils.config_mock import ConfigMock
 
 
 class TestX509Certificates(unittest.TestCase):

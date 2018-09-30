@@ -43,7 +43,7 @@ from ganeti import compat
 from qa import qa_config
 from qa import qa_error
 
-from . import testutils
+import testutils
 
 
 class TestTestEnabled(unittest.TestCase):

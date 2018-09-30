@@ -33,8 +33,8 @@
 
 import unittest
 import itertools
-from . import mocks
-from .cmdlib.testsupport.rpc_runner_mock import CreateRpcRunnerMock
+import mocks
+from cmdlib.testsupport.rpc_runner_mock import CreateRpcRunnerMock
 
 from ganeti import compat
 from ganeti import errors
@@ -50,7 +50,7 @@ from ganeti.constants import \
     LOCK_ATTEMPTS_MAXWAIT, \
     LOCK_ATTEMPTS_MINWAIT
 
-from . import testutils
+import testutils
 
 
 # FIXME: Document what BGL whitelist means

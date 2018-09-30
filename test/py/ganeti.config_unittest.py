@@ -48,10 +48,10 @@ from ganeti import serializer
 
 from ganeti.config import TemporaryReservationManager
 
-from . import testutils
-from . import mocks
+import testutils
+import mocks
 import mock
-from .testutils.config_mock import ConfigMock, _UpdateIvNames
+from testutils.config_mock import ConfigMock, _UpdateIvNames
 
 
 def _StubGetEntResolver():

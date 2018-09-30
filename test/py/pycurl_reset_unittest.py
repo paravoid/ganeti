@@ -36,7 +36,7 @@ import unittest
 import textwrap
 import pycurl
 
-from . import testutils
+import testutils
 
 
 DETAILS = [

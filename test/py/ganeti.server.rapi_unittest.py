@@ -51,7 +51,7 @@ import ganeti.rapi.testutils
 import ganeti.rapi.rlib2
 import ganeti.http.auth
 
-from . import testutils
+import testutils
 
 
 class TestRemoteApiHandler(unittest.TestCase):

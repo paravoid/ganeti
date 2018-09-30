@@ -46,7 +46,7 @@ from ganeti import cmdlib
 import ganeti.masterd.instance as gmi
 from ganeti.hypervisor import hv_base
 
-from . import testutils
+import testutils
 
 
 class TestConstants(unittest.TestCase):
